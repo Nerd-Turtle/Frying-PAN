@@ -25,3 +25,21 @@ class Source(Base):
     )
 
     project = relationship("Project", back_populates="sources")
+    scopes = relationship(
+        "Scope",
+        back_populates="source",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    objects = relationship(
+        "ConfigObject",
+        back_populates="source",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    parse_warnings = relationship(
+        "ParseWarning",
+        back_populates="source",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )

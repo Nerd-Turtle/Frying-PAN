@@ -2,7 +2,7 @@ from fastapi import HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.schemas.source import SourceRead
-from app.services.analysis_service import record_placeholder_analysis
+from app.services.analysis_service import build_source_inventory
 from app.services.event_service import log_project_event
 from app.services.project_service import create_source_record, get_project_or_404
 from app.services.storage_service import delete_stored_file, save_uploaded_source_file
@@ -46,7 +46,6 @@ def import_source_upload(
 
         raise
 
-    # TODO: Replace this stub with a real indexing pipeline that parses XML
-    # into canonical backend models before any semantic workflow is attempted.
-    record_placeholder_analysis(db=db, project_id=project.id, source_id=source.id)
+    build_source_inventory(db=db, source=source)
+    db.refresh(source)
     return source

@@ -70,7 +70,7 @@ def test_source_upload_persists_metadata_file_and_events() -> None:
         assert source["filename"] == filename
         assert source["file_sha256"] == expected_sha256
         assert source["source_type"] == "panorama_xml"
-        assert source["parse_status"] == "uploaded"
+        assert source["parse_status"] == "parsed"
 
         stored_file = Path(source["storage_path"])
         assert stored_file.exists()
@@ -84,7 +84,7 @@ def test_source_upload_persists_metadata_file_and_events() -> None:
         event_types = {event["event_type"] for event in detail["events"]}
         assert "project.created" in event_types
         assert "source.uploaded" in event_types
-        assert "source.indexing.placeholder" in event_types
+        assert "source.indexed" in event_types
 
 
 def test_duplicate_source_upload_is_rejected_by_checksum() -> None:

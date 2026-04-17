@@ -189,11 +189,15 @@ Goal:
 
 Status:
 
-- `todo`
+- `pass`
 
 Tasks:
 
 ### 2.1 Parse scope hierarchy from Panorama XML
+
+Status:
+
+- `pass`
 
 Work:
 
@@ -215,6 +219,10 @@ Suggested validation/tests:
 - DB row count and content verification for discovered scopes
 
 ### 2.2 Parse v1 object types into canonical records
+
+Status:
+
+- `pass`
 
 Work:
 
@@ -238,6 +246,10 @@ Suggested validation/tests:
 - database verification of inserted object rows
 
 ### 2.3 Track parse warnings and unsupported object types cleanly
+
+Status:
+
+- `pass`
 
 Work:
 
