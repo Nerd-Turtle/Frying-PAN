@@ -27,11 +27,15 @@ Goal:
 
 Status:
 
-- `todo`
+- `pass`
 
 Tasks:
 
 ### 0.1 Convert backend baseline from SQLite-first to PostgreSQL-first
+
+Status:
+
+- `pass`
 
 Work:
 
@@ -54,6 +58,10 @@ Suggested validation/tests:
 
 ### 0.2 Add migration framework baseline
 
+Status:
+
+- `pass`
+
 Work:
 
 - add Alembic configuration
@@ -72,6 +80,10 @@ Suggested validation/tests:
 - run migration downgrade/upgrade cycle on a scratch database
 
 ### 0.3 Define backend package boundaries for parser, persistence, and analysis
+
+Status:
+
+- `pass`
 
 Work:
 

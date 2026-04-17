@@ -3,10 +3,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.event import EventRecord
 from app.models.project import Project
 from app.models.source import Source
 from app.schemas.project import ProjectCreate
+from app.services.event_service import log_project_event
 
 
 def list_projects(db: Session) -> list[Project]:
@@ -64,13 +64,3 @@ def create_source_record(
         payload=f"Stored source file '{filename}' at '{storage_path}'.",
     )
     return source
-
-
-def log_project_event(
-    db: Session, project_id: str, event_type: str, payload: str | None = None
-) -> EventRecord:
-    event = EventRecord(project_id=project_id, event_type=event_type, payload=payload)
-    db.add(event)
-    db.commit()
-    db.refresh(event)
-    return event

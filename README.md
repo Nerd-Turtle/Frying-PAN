@@ -115,6 +115,7 @@ Backend:
 
 - FastAPI
 - PostgreSQL as the primary database target
+- Alembic for schema migrations
 - Raw uploads written to disk under `storage/uploads/`
 - Placeholder parser and merge modules with explicit TODO markers
 
@@ -132,6 +133,24 @@ The starter backend currently exposes:
 - `POST /api/projects/{project_id}/exports`
 
 Only project creation, listing, detail retrieval, and source upload have meaningful starter behavior right now. The rest are honest scaffolds for future work.
+
+## Database Migrations
+
+Backend schema changes should go through Alembic.
+
+From `backend/`:
+
+```bash
+alembic upgrade head
+alembic downgrade -1
+alembic revision -m "describe change"
+```
+
+The application should not rely on implicit `create_all()` behavior at startup. Migration state is the source of truth for database structure.
+
+In the Docker Compose development path, the backend service runs `alembic upgrade head` before starting Uvicorn. For local non-Docker development, run Alembic explicitly before exercising schema-dependent routes.
+
+If you are moving from the earlier pre-Alembic scaffold that auto-created tables at startup, reset the local development database before first booting the migration-driven stack. In Docker Compose that typically means `docker compose down -v`.
 
 ## Development Priorities
 

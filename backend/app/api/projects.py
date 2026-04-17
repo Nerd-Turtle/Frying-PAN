@@ -2,11 +2,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.schemas.project import (
-    PlaceholderActionResponse,
-    ProjectCreate,
-    ProjectDetail,
-)
+from app.schemas.project import ProjectCreate, ProjectDetail, ProjectRead
 from app.schemas.source import SourceRead
 from app.services.analysis_service import record_placeholder_analysis
 from app.services.project_service import (
@@ -14,7 +10,6 @@ from app.services.project_service import (
     create_source_record,
     get_project_or_404,
     list_projects,
-    log_project_event,
 )
 from app.services.storage_service import save_uploaded_source_file
 
@@ -68,57 +63,3 @@ def upload_source(
     # into canonical backend models before any semantic workflow is attempted.
     record_placeholder_analysis(db=db, project_id=project.id, source_id=source.id)
     return source
-
-
-@router.post("/{project_id}/analysis/run", response_model=PlaceholderActionResponse)
-def run_analysis(project_id: str, db: Session = Depends(get_db)) -> PlaceholderActionResponse:
-    project = get_project_or_404(db, project_id)
-    log_project_event(
-        db=db,
-        project_id=project.id,
-        event_type="analysis.requested",
-        payload="TODO: implement canonical Panorama source analysis pipeline",
-    )
-    return PlaceholderActionResponse(
-        status="placeholder",
-        message=(
-            "Analysis pipeline is not implemented yet. "
-            "This endpoint currently records an event only."
-        ),
-    )
-
-
-@router.post("/{project_id}/merge/preview", response_model=PlaceholderActionResponse)
-def preview_merge(project_id: str, db: Session = Depends(get_db)) -> PlaceholderActionResponse:
-    project = get_project_or_404(db, project_id)
-    log_project_event(
-        db=db,
-        project_id=project.id,
-        event_type="merge.preview.requested",
-        payload="TODO: implement merge planning against canonical backend models",
-    )
-    return PlaceholderActionResponse(
-        status="placeholder",
-        message=(
-            "Merge preview is not implemented yet. "
-            "Future work belongs in backend merge services, not the frontend."
-        ),
-    )
-
-
-@router.post("/{project_id}/exports", response_model=PlaceholderActionResponse)
-def export_project(project_id: str, db: Session = Depends(get_db)) -> PlaceholderActionResponse:
-    project = get_project_or_404(db, project_id)
-    log_project_event(
-        db=db,
-        project_id=project.id,
-        event_type="export.requested",
-        payload="TODO: implement XML export from normalized internal models",
-    )
-    return PlaceholderActionResponse(
-        status="placeholder",
-        message=(
-            "Export generation is not implemented yet. "
-            "This will later render XML from canonical backend models."
-        ),
-    )

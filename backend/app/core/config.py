@@ -8,7 +8,7 @@ class Settings(BaseSettings):
 
     app_name: str = "Frying-PAN API"
     storage_root: str = "../storage"
-    database_url: str = "sqlite:///../storage/projects/frying_pan.db"
+    database_url: str = "postgresql+psycopg://frying_pan:frying_pan@postgres:5432/frying_pan"
     cors_origins: str = "http://localhost:3000"
 
     @property

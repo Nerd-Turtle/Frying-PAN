@@ -1,16 +1,35 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-frying_pan}
+      POSTGRES_USER: ${POSTGRES_USER:-frying_pan}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-frying_pan}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-frying_pan} -d ${POSTGRES_DB:-frying_pan}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: ./backend
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     working_dir: /app/backend
     environment:
       FRYING_PAN_STORAGE_ROOT: ${FRYING_PAN_STORAGE_ROOT:-../storage}
-      FRYING_PAN_DATABASE_URL: ${FRYING_PAN_DATABASE_URL:-sqlite:///../storage/projects/frying_pan.db}
+      FRYING_PAN_DATABASE_URL: ${FRYING_PAN_DATABASE_URL:-postgresql+psycopg://frying_pan:frying_pan@postgres:5432/frying_pan}
       FRYING_PAN_CORS_ORIGINS: ${FRYING_PAN_CORS_ORIGINS:-http://localhost:3000}
     volumes:
       - ./backend:/app/backend
       - ./storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "8000:8000"
 
@@ -28,3 +47,6 @@ services:
       - backend
     ports:
       - "3000:3000"
+
+volumes:
+  postgres_data:

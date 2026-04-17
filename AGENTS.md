@@ -46,6 +46,8 @@ If a proposed frontend change starts encoding Panorama object rules, reference m
 - Add explicit `TODO:` markers where real Panorama-specific implementation will go.
 - Keep repository structure clean and unsurprising.
 - Preserve the separation between UX concerns and backend config logic.
+- Contributors and coding agents are authorized to install required apps, packages, and development tools when needed to complete the task, as long as the installation is relevant, minimal, and documented in the work summary when it materially affects the environment.
+- When tests require temporary local services, containers, or other runtime environments, shut them down after validation is complete unless the user explicitly asks to keep them running.
 
 ## v1 Scope Guardrails
 
