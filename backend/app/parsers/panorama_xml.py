@@ -42,9 +42,23 @@ class ParseWarningRecord:
 
 
 @dataclass(frozen=True)
+class ExtractedReferenceRecord:
+    owner_scope_path: str
+    owner_object_type: str
+    owner_object_name: str
+    reference_kind: str
+    reference_path: str
+    target_name: str
+    target_type_hints: list[str]
+    target_scope_hint: str | None = None
+    metadata: dict = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
 class PanoramaParseResult:
     scopes: list[ScopeRecord]
     objects: list[ObjectRecord]
+    references: list[ExtractedReferenceRecord]
     warnings: list[ParseWarningRecord]
 
 
@@ -68,6 +82,7 @@ class PanoramaXmlParser:
 
         scopes: list[ScopeRecord] = []
         objects: list[ObjectRecord] = []
+        references: list[ExtractedReferenceRecord] = []
         warnings: list[ParseWarningRecord] = []
 
         readonly_meta = self._parse_readonly_device_groups(root)
@@ -91,6 +106,7 @@ class PanoramaXmlParser:
             scope_xpath="/config/shared",
         )
         objects.extend(shared_objects)
+        references.extend(self._extract_scope_references(shared_scope, shared_element))
         warnings.extend(shared_warnings)
 
         device_entry = root.find("./devices/entry")
@@ -121,9 +137,15 @@ class PanoramaXmlParser:
                         scope_xpath=self._device_group_xpath(scope.scope_name),
                     )
                     objects.extend(dg_objects)
+                    references.extend(self._extract_scope_references(scope, dg_entry))
                     warnings.extend(dg_warnings)
 
-        return PanoramaParseResult(scopes=scopes, objects=objects, warnings=warnings)
+        return PanoramaParseResult(
+            scopes=scopes,
+            objects=objects,
+            references=references,
+            warnings=warnings,
+        )
 
     def _build_device_group_scopes(
         self,
@@ -280,6 +302,51 @@ class PanoramaXmlParser:
                 )
             )
         return records
+
+    def _extract_scope_references(
+        self, scope: ScopeRecord, scope_element: ET.Element
+    ) -> list[ExtractedReferenceRecord]:
+        references: list[ExtractedReferenceRecord] = []
+
+        for entry in scope_element.findall("./address-group/entry"):
+            name = entry.get("name")
+            if not name:
+                continue
+            for index, member in enumerate(entry.findall("./static/member"), start=1):
+                references.append(
+                    ExtractedReferenceRecord(
+                        owner_scope_path=scope.scope_path,
+                        owner_object_type="address_group",
+                        owner_object_name=name,
+                        reference_kind="group_member",
+                        reference_path=f"static/member[{index}]",
+                        target_name=self._text(member) or "",
+                        target_type_hints=["address", "address_group"],
+                    )
+                )
+
+        for entry in scope_element.findall("./service-group/entry"):
+            name = entry.get("name")
+            if not name:
+                continue
+            for index, member in enumerate(entry.findall("./members/member"), start=1):
+                references.append(
+                    ExtractedReferenceRecord(
+                        owner_scope_path=scope.scope_path,
+                        owner_object_type="service_group",
+                        owner_object_name=name,
+                        reference_kind="group_member",
+                        reference_path=f"members/member[{index}]",
+                        target_name=self._text(member) or "",
+                        target_type_hints=[
+                            "service",
+                            "service_group",
+                            "builtin_service",
+                        ],
+                    )
+                )
+
+        return references
 
     def _build_payloads(self, section_name: str, entry: ET.Element) -> tuple[dict, dict]:
         if section_name == "address":

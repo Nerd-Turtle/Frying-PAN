@@ -38,3 +38,16 @@ class ConfigObject(Base):
 
     source = relationship("Source", back_populates="objects")
     scope = relationship("Scope", back_populates="objects")
+    outgoing_references = relationship(
+        "ConfigReference",
+        foreign_keys="ConfigReference.owner_object_id",
+        back_populates="owner_object",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    incoming_references = relationship(
+        "ConfigReference",
+        foreign_keys="ConfigReference.resolved_object_id",
+        back_populates="resolved_object",
+        lazy="selectin",
+    )

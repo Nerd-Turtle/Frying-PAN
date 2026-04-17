@@ -275,11 +275,15 @@ Goal:
 
 Status:
 
-- `todo`
+- `pass`
 
 Tasks:
 
 ### 3.1 Extract outbound references from v1 object types
+
+Status:
+
+- `pass`
 
 Work:
 
@@ -298,6 +302,10 @@ Suggested validation/tests:
 - database verification of expected reference rows
 
 ### 3.2 Implement scope-aware reference resolution
+
+Status:
+
+- `pass`
 
 Work:
 
@@ -319,6 +327,10 @@ Suggested validation/tests:
 - targeted tests for local, ancestor, shared, builtin, and unresolved cases
 
 ### 3.3 Model precedence behavior as configuration, not parser magic
+
+Status:
+
+- `pass`
 
 Work:
 

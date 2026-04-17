@@ -43,3 +43,9 @@ class Source(Base):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    references = relationship(
+        "ConfigReference",
+        back_populates="source",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
