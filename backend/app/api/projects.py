@@ -1,17 +1,15 @@
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.schemas.project import ProjectCreate, ProjectDetail, ProjectRead
 from app.schemas.source import SourceRead
-from app.services.analysis_service import record_placeholder_analysis
 from app.services.project_service import (
     create_project,
-    create_source_record,
     get_project_or_404,
     list_projects,
 )
-from app.services.storage_service import save_uploaded_source_file
+from app.services.source_service import import_source_upload
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -43,23 +41,4 @@ def upload_source(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ) -> SourceRead:
-    project = get_project_or_404(db, project_id)
-
-    if not file.filename:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Uploaded file must have a filename.",
-        )
-
-    storage_path = save_uploaded_source_file(project_id=project.id, upload=file)
-    source = create_source_record(
-        db=db,
-        project_id=project.id,
-        filename=file.filename,
-        storage_path=storage_path,
-    )
-
-    # TODO: Replace this stub with a real indexing pipeline that parses XML
-    # into canonical backend models before any semantic workflow is attempted.
-    record_placeholder_analysis(db=db, project_id=project.id, source_id=source.id)
-    return source
+    return import_source_upload(db=db, project_id=project_id, upload=file)

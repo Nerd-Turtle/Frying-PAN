@@ -5,11 +5,13 @@ export type HealthResponse = {
 
 export type Source = {
   id: string;
+  label: string;
   filename: string;
   storage_path: string;
-  kind: string;
+  file_sha256: string;
+  source_type: string;
   parse_status: string;
-  uploaded_at: string;
+  imported_at: string;
 };
 
 export type EventRecord = {

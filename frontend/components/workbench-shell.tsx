@@ -172,9 +172,10 @@ export function WorkbenchShell() {
                           border: "1px solid var(--line)",
                         }}
                       >
-                        <div style={{ fontWeight: 600 }}>{source.filename}</div>
+                        <div style={{ fontWeight: 600 }}>{source.label}</div>
                         <div style={{ fontSize: 13, color: "var(--muted)" }}>
-                          {source.parse_status} • {new Date(source.uploaded_at).toLocaleString()}
+                          {source.source_type} • {source.parse_status} •{" "}
+                          {new Date(source.imported_at).toLocaleString()}
                         </div>
                       </div>
                     ))

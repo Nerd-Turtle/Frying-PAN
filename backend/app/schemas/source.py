@@ -7,11 +7,13 @@ class SourceRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
+    label: str
     filename: str
     storage_path: str
-    kind: str
+    file_sha256: str
+    source_type: str
     parse_status: str
-    uploaded_at: datetime
+    imported_at: datetime
 
 
 class EventRead(BaseModel):

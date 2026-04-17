@@ -47,15 +47,42 @@ def get_project_or_404(db: Session, project_id: str) -> Project:
 
 
 def create_source_record(
-    db: Session, project_id: str, filename: str, storage_path: str
+    db: Session,
+    project_id: str,
+    label: str,
+    filename: str,
+    storage_path: str,
+    file_sha256: str,
+    source_type: str = "panorama_xml",
 ) -> Source:
+    existing_source = find_source_by_checksum(
+        db=db,
+        project_id=project_id,
+        file_sha256=file_sha256,
+    )
+    if existing_source is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This source has already been imported into the project.",
+        )
+
     source = Source(
         project_id=project_id,
+        label=label,
         filename=filename,
         storage_path=storage_path,
+        file_sha256=file_sha256,
+        source_type=source_type,
     )
     db.add(source)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This source has already been imported into the project.",
+        ) from exc
     db.refresh(source)
     log_project_event(
         db=db,
@@ -64,3 +91,13 @@ def create_source_record(
         payload=f"Stored source file '{filename}' at '{storage_path}'.",
     )
     return source
+
+
+def find_source_by_checksum(
+    db: Session, project_id: str, file_sha256: str
+) -> Source | None:
+    statement = select(Source).where(
+        Source.project_id == project_id,
+        Source.file_sha256 == file_sha256,
+    )
+    return db.scalars(statement).first()

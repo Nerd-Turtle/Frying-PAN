@@ -109,11 +109,15 @@ Goal:
 
 Status:
 
-- `todo`
+- `pass`
 
 Tasks:
 
 ### 1.1 Implement PostgreSQL-backed project records
+
+Status:
+
+- `pass`
 
 Work:
 
@@ -134,6 +138,10 @@ Suggested validation/tests:
 
 ### 1.2 Implement source import records and raw file storage
 
+Status:
+
+- `pass`
+
 Work:
 
 - create `sources` table and model
@@ -153,6 +161,10 @@ Suggested validation/tests:
 - file existence check on storage path
 
 ### 1.3 Add project/source audit trail
+
+Status:
+
+- `pass`
 
 Work:
 
