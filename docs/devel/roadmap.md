@@ -355,11 +355,15 @@ Goal:
 
 Status:
 
-- `todo`
+- `pass`
 
 Tasks:
 
 ### 4.1 Duplicate analysis by name and value
+
+Status:
+
+- `pass`
 
 Work:
 
@@ -380,6 +384,10 @@ Suggested validation/tests:
 
 ### 4.2 Normalization suggestion analysis
 
+Status:
+
+- `pass`
+
 Work:
 
 - detect likely IPv4 host to `/32` suggestions
@@ -397,6 +405,10 @@ Suggested validation/tests:
 - regression test proving analysis does not mutate canonical stored values
 
 ### 4.3 Promotion candidate and blocker analysis
+
+Status:
+
+- `pass`
 
 Work:
 

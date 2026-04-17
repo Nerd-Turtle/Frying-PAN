@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.schemas.analysis import AnalysisFilters, AnalysisRunResponse
 from app.schemas.project import PlaceholderActionResponse
 from app.services.workbench_service import (
     request_export_generation,
@@ -12,9 +13,23 @@ from app.services.workbench_service import (
 router = APIRouter(prefix="/projects", tags=["workbench"])
 
 
-@router.post("/{project_id}/analysis/run", response_model=PlaceholderActionResponse)
-def run_analysis(project_id: str, db: Session = Depends(get_db)) -> PlaceholderActionResponse:
-    return request_project_analysis(db=db, project_id=project_id)
+@router.post("/{project_id}/analysis/run", response_model=AnalysisRunResponse)
+def run_analysis(
+    project_id: str,
+    source_id: str | None = Query(default=None),
+    object_type: str | None = Query(default=None),
+    scope_path: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+) -> AnalysisRunResponse:
+    return request_project_analysis(
+        db=db,
+        project_id=project_id,
+        filters=AnalysisFilters(
+            source_id=source_id,
+            object_type=object_type,
+            scope_path=scope_path,
+        ),
+    )
 
 
 @router.post("/{project_id}/merge/preview", response_model=PlaceholderActionResponse)
