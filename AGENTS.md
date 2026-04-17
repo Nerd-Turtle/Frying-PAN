@@ -20,6 +20,7 @@ The architecture split is strict:
 
 - `frontend/` owns user experience, workflow orchestration, project views, upload forms, browsing, diff/merge presentation, and conflict-resolution interfaces.
 - `backend/` owns all configuration semantics, parsing, normalization, validation, diffing, merge planning, dependency analysis, and export generation.
+- application/account concerns and project-scoped Panorama workbench concerns must remain separated, with `projects` acting as the boundary between them.
 
 The frontend must never become the place where Panorama configuration meaning is implemented.
 
@@ -67,7 +68,8 @@ Do not overbuild these areas in v1:
 - fake enterprise abstractions
 
 FastAPI background jobs are enough unless the code clearly proves otherwise.
-SQLite is enough unless the code clearly proves otherwise.
+PostgreSQL is the primary database target.
+Do not treat SQLite as the architectural baseline going forward unless a task explicitly targets optional local/dev support.
 
 ## Backend Guidance
 
@@ -77,8 +79,9 @@ When adding backend functionality:
 - Isolate XML parsing in dedicated parser modules.
 - Keep merge logic separate from API route handlers.
 - Keep persistence concerns separate from parser and merge code.
+- Keep application/account logic separate from project workbench persistence and config semantics.
 - Make import/export boundaries explicit.
-- Record project/source/event metadata in SQLite.
+- Record project/source/event metadata and canonical analysis state in PostgreSQL.
 - Store raw uploaded XML on disk under `storage/`.
 
 ## Frontend Guidance

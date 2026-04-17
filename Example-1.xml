@@ -1,0 +1,846 @@
+<?xml version="1.0"?>
+<config version="11.2.0" urldb="paloaltonetworks" detail-version="11.2.5">
+  <mgt-config>
+    <devices/>
+    <users>
+      <entry name="admin">
+        <phash>$5$kgxbanww$dyccje.6mPYAOOK8syBI7ICzOs6J9bdZKYoc8lg5673</phash>
+        <permissions>
+          <role-based>
+            <superuser>yes</superuser>
+          </role-based>
+        </permissions>
+      </entry>
+      <entry name="__vm_series">
+        <phash>$5$ceyfirvg$EvKOCe4YOhCAIlTNKU93OnezJfLH7S2D5kS16x49wj8</phash>
+        <permissions>
+          <role-based>
+            <panorama-admin>yes</panorama-admin>
+          </role-based>
+        </permissions>
+      </entry>
+      <entry name="__cloudconnector">
+        <phash>$5$hevrqkrx$JjfEfosPg1vuhwe.tHhhYI/WxwcpN5mL5lW59Zot5J6</phash>
+        <permissions>
+          <role-based>
+            <panorama-admin>yes</panorama-admin>
+          </role-based>
+        </permissions>
+      </entry>
+      <entry name="__openconfig">
+        <phash>$5$eedurpvr$WYIWHpUewT3lCWE1NoB1K4IPF2UBu.I1cusuW5j5/I1</phash>
+        <permissions>
+          <role-based>
+            <panorama-admin>yes</panorama-admin>
+          </role-based>
+        </permissions>
+      </entry>
+    </users>
+    <password-complexity>
+      <enabled>yes</enabled>
+      <minimum-length>8</minimum-length>
+    </password-complexity>
+  </mgt-config>
+  <shared>
+    <address>
+      <entry name="Shared-IP-Netmask">
+        <ip-netmask>192.168.1.1/24</ip-netmask>
+      </entry>
+      <entry name="Shared-IP-Range-v4">
+        <ip-range>10.0.0.0-10.0.0.255</ip-range>
+      </entry>
+      <entry name="Shared-IP-Range-v6">
+        <ip-range>2001:db8:123:1::1-2001:db8:123:1::255</ip-range>
+      </entry>
+      <entry name="Shared-IP-Wildcard-Mask">
+        <ip-wildcard>10.20.1.0/0.0.248.255</ip-wildcard>
+      </entry>
+      <entry name="Shared-FQDN">
+        <fqdn>www.google.com</fqdn>
+      </entry>
+      <entry name="DUP-IP-ADDRESS">
+        <ip-netmask>172.16.1.1/32</ip-netmask>
+      </entry>
+    </address>
+    <address-group>
+      <entry name="Shared-Group">
+        <static>
+          <member>Shared-IP-Netmask</member>
+        </static>
+      </entry>
+    </address-group>
+    <region>
+      <entry name="US">
+        <address/>
+        <disable-override>no</disable-override>
+      </entry>
+    </region>
+    <application-group>
+      <entry name="Shared-App-Group">
+        <members>
+          <member>1c-enterprise</member>
+        </members>
+      </entry>
+    </application-group>
+    <application-filter>
+      <entry name="Shared-App-Filter">
+        <disable-override>no</disable-override>
+        <category>
+          <member>business-systems</member>
+        </category>
+        <subcategory>
+          <member>artificial-intelligence</member>
+        </subcategory>
+      </entry>
+    </application-filter>
+    <service>
+      <entry name="Shared-Service">
+        <protocol>
+          <tcp>
+            <port>1</port>
+            <override>
+              <no/>
+            </override>
+          </tcp>
+        </protocol>
+      </entry>
+    </service>
+    <service-group>
+      <entry name="Shared-Service-Group">
+        <members>
+          <member>service-http</member>
+        </members>
+      </entry>
+    </service-group>
+    <tag>
+      <entry name="Shared-Tag">
+        <color>color1</color>
+      </entry>
+    </tag>
+    <device-object>
+      <entry name="Shared-Device-Object">
+        <osfamily>
+          <member>MacOS</member>
+        </osfamily>
+      </entry>
+    </device-object>
+    <profiles>
+      <hip-objects>
+        <entry name="Shared-HIP-Object"/>
+      </hip-objects>
+      <hip-profiles>
+        <entry name="Shared-HIP-Profile">
+          <match>not "Shared-HIP-Object"</match>
+        </entry>
+      </hip-profiles>
+      <data-objects>
+        <entry name="Shared-Data-Pattern">
+          <pattern-type>
+            <file-properties/>
+          </pattern-type>
+        </entry>
+      </data-objects>
+      <custom-url-category>
+        <entry name="Shared-URL-CAT" uuid="1856852a-5273-46b2-bb67-59e2c7cdf555">
+          <type>URL List</type>
+        </entry>
+      </custom-url-category>
+    </profiles>
+    <external-list>
+      <entry name="Shared-IP-EDL">
+        <type>
+          <ip>
+            <recurring>
+              <five-minute/>
+            </recurring>
+            <url>http://</url>
+          </ip>
+        </type>
+      </entry>
+      <entry name="Shared-Domain-EDL">
+        <type>
+          <domain>
+            <recurring>
+              <hourly/>
+            </recurring>
+            <url>http://</url>
+          </domain>
+        </type>
+      </entry>
+      <entry name="Shared-URL-EDL">
+        <type>
+          <url>
+            <recurring>
+              <hourly/>
+            </recurring>
+            <url>http://</url>
+          </url>
+        </type>
+      </entry>
+    </external-list>
+    <profile-group>
+      <entry name="Shared-SEC-Profile">
+        <virus>
+          <member>default</member>
+        </virus>
+        <spyware>
+          <member>default</member>
+        </spyware>
+        <vulnerability>
+          <member>default</member>
+        </vulnerability>
+        <url-filtering>
+          <member>default</member>
+        </url-filtering>
+        <file-blocking>
+          <member>basic file blocking</member>
+        </file-blocking>
+        <wildfire-analysis>
+          <member>default</member>
+        </wildfire-analysis>
+      </entry>
+    </profile-group>
+    <pre-rulebase>
+      <security>
+        <rules>
+          <entry name="Shared-Pre-Rule" uuid="8f0a7db9-f7b7-45a2-b2ee-295f9507da28">
+            <target>
+              <negate>no</negate>
+            </target>
+            <to>
+              <member>any</member>
+            </to>
+            <from>
+              <member>any</member>
+            </from>
+            <source>
+              <member>any</member>
+            </source>
+            <destination>
+              <member>any</member>
+            </destination>
+            <source-user>
+              <member>any</member>
+            </source-user>
+            <category>
+              <member>any</member>
+            </category>
+            <saas-user-list>
+              <member>any</member>
+            </saas-user-list>
+            <saas-tenant-list>
+              <member>any</member>
+            </saas-tenant-list>
+            <application>
+              <member>any</member>
+            </application>
+            <service>
+              <member>application-default</member>
+            </service>
+            <source-hip>
+              <member>any</member>
+            </source-hip>
+            <destination-hip>
+              <member>any</member>
+            </destination-hip>
+            <action>allow</action>
+            <log-start>no</log-start>
+            <log-end>yes</log-end>
+          </entry>
+        </rules>
+      </security>
+    </pre-rulebase>
+    <post-rulebase>
+      <security>
+        <rules>
+          <entry name="Shared-Post-Rule" uuid="0026894e-b08c-413f-9873-cbc964725927">
+            <target>
+              <negate>no</negate>
+            </target>
+            <to>
+              <member>any</member>
+            </to>
+            <from>
+              <member>any</member>
+            </from>
+            <source>
+              <member>any</member>
+            </source>
+            <destination>
+              <member>any</member>
+            </destination>
+            <source-user>
+              <member>any</member>
+            </source-user>
+            <category>
+              <member>any</member>
+            </category>
+            <saas-user-list>
+              <member>any</member>
+            </saas-user-list>
+            <saas-tenant-list>
+              <member>any</member>
+            </saas-tenant-list>
+            <application>
+              <member>any</member>
+            </application>
+            <service>
+              <member>application-default</member>
+            </service>
+            <source-hip>
+              <member>any</member>
+            </source-hip>
+            <destination-hip>
+              <member>any</member>
+            </destination-hip>
+            <action>allow</action>
+            <log-start>no</log-start>
+            <log-end>yes</log-end>
+          </entry>
+        </rules>
+      </security>
+    </post-rulebase>
+  </shared>
+  <devices>
+    <entry name="localhost.localdomain">
+      <deviceconfig>
+        <system>
+          <netmask>255.255.255.0</netmask>
+          <update-server>updates.paloaltonetworks.com</update-server>
+          <update-schedule>
+            <threats>
+              <recurring>
+                <weekly>
+                  <day-of-week>wednesday</day-of-week>
+                  <at>01:02</at>
+                  <action>download-only</action>
+                </weekly>
+              </recurring>
+            </threats>
+          </update-schedule>
+          <timezone>US/Pacific</timezone>
+          <service>
+            <disable-telnet>yes</disable-telnet>
+            <disable-http>yes</disable-http>
+          </service>
+          <device-telemetry>
+            <device-health-performance>yes</device-health-performance>
+            <product-usage>yes</product-usage>
+            <threat-prevention>yes</threat-prevention>
+            <region>Americas</region>
+          </device-telemetry>
+          <hostname>Panorama</hostname>
+          <type>
+            <static/>
+          </type>
+          <ip-address>192.168.76.20</ip-address>
+          <default-gateway>192.168.76.1</default-gateway>
+        </system>
+        <setting>
+          <management>
+            <storage-partition>
+              <internal/>
+            </storage-partition>
+            <hostname-type-in-syslog>FQDN</hostname-type-in-syslog>
+            <idle-timeout>0</idle-timeout>
+          </management>
+        </setting>
+      </deviceconfig>
+      <device-group>
+        <entry name="Device-Group-1">
+          <devices/>
+          <address>
+            <entry name="DG1-IP-Netmask">
+              <ip-netmask>192.168.1.1/24</ip-netmask>
+            </entry>
+          </address>
+          <description>DG1</description>
+          <address-group>
+            <entry name="DG1-Group">
+              <static>
+                <member>DG1-IP-Netmask</member>
+              </static>
+            </entry>
+            <entry name="Nested-Groups">
+              <static>
+                <member>DG1-Group</member>
+                <member>Shared-Group</member>
+              </static>
+            </entry>
+          </address-group>
+          <region>
+            <entry name="US">
+              <disable-override>no</disable-override>
+              <address/>
+            </entry>
+          </region>
+          <application-group>
+            <entry name="DG1-App-Group">
+              <members>
+                <member>1c-enterprise</member>
+              </members>
+            </entry>
+          </application-group>
+          <application-filter>
+            <entry name="DG1-App-Filter">
+              <disable-override>no</disable-override>
+              <category>
+                <member>business-systems</member>
+              </category>
+              <subcategory>
+                <member>artificial-intelligence</member>
+              </subcategory>
+            </entry>
+          </application-filter>
+          <service>
+            <entry name="DG1-Service">
+              <protocol>
+                <tcp>
+                  <port>1</port>
+                  <override>
+                    <no/>
+                  </override>
+                </tcp>
+              </protocol>
+            </entry>
+          </service>
+          <service-group>
+            <entry name="DG1-Service-Group">
+              <members>
+                <member>service-http</member>
+              </members>
+            </entry>
+          </service-group>
+          <tag>
+            <entry name="DG1-Tag">
+              <color>color1</color>
+            </entry>
+          </tag>
+          <device-object>
+            <entry name="DG1-Device-Object">
+              <osfamily>
+                <member>MacOS</member>
+              </osfamily>
+            </entry>
+          </device-object>
+          <profiles>
+            <hip-objects>
+              <entry name="DG1-HIP-Object">
+                <disable-override>no</disable-override>
+              </entry>
+            </hip-objects>
+            <hip-profiles>
+              <entry name="DG1-HIP-Profile">
+                <match>not "DG1-HIP-Object"</match>
+              </entry>
+              <entry name="DG1-Shared-HIP-Profile">
+                <match>"Shared-HIP-Object" and "DG1-HIP-Object" </match>
+              </entry>
+            </hip-profiles>
+          </profiles>
+          <external-list>
+            <entry name="DG1-IP-EDL">
+              <type>
+                <ip>
+                  <recurring>
+                    <five-minute/>
+                  </recurring>
+                  <url>http://</url>
+                </ip>
+              </type>
+            </entry>
+          </external-list>
+          <profile-group>
+            <entry name="DG1-SEC-Profile">
+              <virus>
+                <member>default</member>
+              </virus>
+              <spyware>
+                <member>default</member>
+              </spyware>
+              <vulnerability>
+                <member>default</member>
+              </vulnerability>
+              <url-filtering>
+                <member>default</member>
+              </url-filtering>
+              <file-blocking>
+                <member>basic file blocking</member>
+              </file-blocking>
+              <wildfire-analysis>
+                <member>default</member>
+              </wildfire-analysis>
+            </entry>
+          </profile-group>
+          <pre-rulebase>
+            <security>
+              <rules>
+                <entry name="DG1-Pre-Rule" uuid="dc0caa17-392c-4776-98c4-03a99a2a782a">
+                  <target>
+                    <negate>no</negate>
+                  </target>
+                  <to>
+                    <member>any</member>
+                  </to>
+                  <from>
+                    <member>any</member>
+                  </from>
+                  <source>
+                    <member>any</member>
+                  </source>
+                  <destination>
+                    <member>any</member>
+                  </destination>
+                  <source-user>
+                    <member>any</member>
+                  </source-user>
+                  <category>
+                    <member>any</member>
+                  </category>
+                  <saas-user-list>
+                    <member>any</member>
+                  </saas-user-list>
+                  <saas-tenant-list>
+                    <member>any</member>
+                  </saas-tenant-list>
+                  <application>
+                    <member>any</member>
+                  </application>
+                  <service>
+                    <member>application-default</member>
+                  </service>
+                  <source-hip>
+                    <member>any</member>
+                  </source-hip>
+                  <destination-hip>
+                    <member>any</member>
+                  </destination-hip>
+                  <action>allow</action>
+                  <log-start>no</log-start>
+                  <log-end>yes</log-end>
+                </entry>
+              </rules>
+            </security>
+          </pre-rulebase>
+          <post-rulebase>
+            <security>
+              <rules>
+                <entry name="DG1-Post-Rule" uuid="f4605752-d332-4b06-ac75-f45b5af0608c">
+                  <target>
+                    <negate>no</negate>
+                  </target>
+                  <to>
+                    <member>any</member>
+                  </to>
+                  <from>
+                    <member>any</member>
+                  </from>
+                  <source>
+                    <member>any</member>
+                  </source>
+                  <destination>
+                    <member>any</member>
+                  </destination>
+                  <source-user>
+                    <member>any</member>
+                  </source-user>
+                  <category>
+                    <member>any</member>
+                  </category>
+                  <saas-user-list>
+                    <member>any</member>
+                  </saas-user-list>
+                  <saas-tenant-list>
+                    <member>any</member>
+                  </saas-tenant-list>
+                  <application>
+                    <member>any</member>
+                  </application>
+                  <service>
+                    <member>application-default</member>
+                  </service>
+                  <source-hip>
+                    <member>any</member>
+                  </source-hip>
+                  <destination-hip>
+                    <member>any</member>
+                  </destination-hip>
+                  <action>allow</action>
+                  <log-start>no</log-start>
+                  <log-end>yes</log-end>
+                </entry>
+              </rules>
+            </security>
+          </post-rulebase>
+        </entry>
+        <entry name="Device-Group-2">
+          <devices/>
+          <address>
+            <entry name="DG2-IP-Netmask">
+              <ip-netmask>192.168.1.1/24</ip-netmask>
+            </entry>
+          </address>
+        </entry>
+        <entry name="DG1-Sub-Group">
+          <devices/>
+          <description>DG1 Sub Group</description>
+          <address>
+            <entry name="DG1-SG-IP-Netmask">
+              <ip-netmask>192.168.1.1/24</ip-netmask>
+            </entry>
+            <entry name="DUP-IP-ADDRESS">
+              <ip-netmask>172.16.1.1</ip-netmask>
+            </entry>
+          </address>
+          <pre-rulebase>
+            <security>
+              <rules>
+                <entry name="DG1-SG-Pre-Rule" uuid="ce9d4b2f-cc39-43f1-a790-53b4fabec100">
+                  <target>
+                    <negate>no</negate>
+                  </target>
+                  <to>
+                    <member>any</member>
+                  </to>
+                  <from>
+                    <member>any</member>
+                  </from>
+                  <source>
+                    <member>any</member>
+                  </source>
+                  <destination>
+                    <member>any</member>
+                  </destination>
+                  <source-user>
+                    <member>any</member>
+                  </source-user>
+                  <category>
+                    <member>any</member>
+                  </category>
+                  <saas-user-list>
+                    <member>any</member>
+                  </saas-user-list>
+                  <saas-tenant-list>
+                    <member>any</member>
+                  </saas-tenant-list>
+                  <application>
+                    <member>any</member>
+                  </application>
+                  <service>
+                    <member>application-default</member>
+                  </service>
+                  <source-hip>
+                    <member>any</member>
+                  </source-hip>
+                  <destination-hip>
+                    <member>any</member>
+                  </destination-hip>
+                  <action>allow</action>
+                  <log-start>no</log-start>
+                  <log-end>yes</log-end>
+                </entry>
+              </rules>
+            </security>
+          </pre-rulebase>
+          <post-rulebase>
+            <security>
+              <rules>
+                <entry name="DG1-SG-Post-Rule" uuid="b66d1a84-b979-4024-a2b2-5ff60f8d41af">
+                  <target>
+                    <negate>no</negate>
+                  </target>
+                  <to>
+                    <member>any</member>
+                  </to>
+                  <from>
+                    <member>any</member>
+                  </from>
+                  <source>
+                    <member>any</member>
+                  </source>
+                  <destination>
+                    <member>any</member>
+                  </destination>
+                  <source-user>
+                    <member>any</member>
+                  </source-user>
+                  <category>
+                    <member>any</member>
+                  </category>
+                  <saas-user-list>
+                    <member>any</member>
+                  </saas-user-list>
+                  <saas-tenant-list>
+                    <member>any</member>
+                  </saas-tenant-list>
+                  <application>
+                    <member>any</member>
+                  </application>
+                  <service>
+                    <member>application-default</member>
+                  </service>
+                  <source-hip>
+                    <member>any</member>
+                  </source-hip>
+                  <destination-hip>
+                    <member>any</member>
+                  </destination-hip>
+                  <action>allow</action>
+                  <log-start>no</log-start>
+                  <log-end>yes</log-end>
+                </entry>
+              </rules>
+            </security>
+          </post-rulebase>
+        </entry>
+      </device-group>
+      <template>
+        <entry name="template-none">
+          <settings/>
+          <config>
+            <devices>
+              <entry name="localhost.localdomain">
+                <vsys>
+                  <entry name="vsys1">
+                    <import>
+                      <network>
+                        <interface>
+                          <member>ethernet1/1</member>
+                          <member>ethernet1/2</member>
+                        </interface>
+                      </network>
+                    </import>
+                  </entry>
+                </vsys>
+                <network>
+                  <interface>
+                    <ethernet>
+                      <entry name="ethernet1/1">
+                        <tap/>
+                      </entry>
+                      <entry name="ethernet1/2">
+                        <tap/>
+                      </entry>
+                    </ethernet>
+                  </interface>
+                  <virtual-router>
+                    <entry name="default">
+                      <ecmp>
+                        <algorithm>
+                          <ip-modulo/>
+                        </algorithm>
+                      </ecmp>
+                      <protocol>
+                        <bgp>
+                          <routing-options>
+                            <graceful-restart>
+                              <enable>yes</enable>
+                            </graceful-restart>
+                          </routing-options>
+                          <enable>no</enable>
+                        </bgp>
+                        <rip>
+                          <enable>no</enable>
+                        </rip>
+                        <ospf>
+                          <enable>no</enable>
+                        </ospf>
+                        <ospfv3>
+                          <enable>no</enable>
+                        </ospfv3>
+                      </protocol>
+                    </entry>
+                  </virtual-router>
+                </network>
+              </entry>
+            </devices>
+          </config>
+          <description>default = none</description>
+        </entry>
+        <entry name="template-vsys1">
+          <settings>
+            <default-vsys>vsys1</default-vsys>
+          </settings>
+          <config>
+            <devices>
+              <entry name="localhost.localdomain">
+                <vsys>
+                  <entry name="vsys1"/>
+                </vsys>
+              </entry>
+            </devices>
+          </config>
+          <description>default = vsys1</description>
+        </entry>
+      </template>
+      <template-stack>
+        <entry name="template-stack-none">
+          <user-group-source>
+            <master-device/>
+          </user-group-source>
+          <templates>
+            <member>template-none</member>
+          </templates>
+        </entry>
+        <entry name="template-stack-vsys1">
+          <user-group-source>
+            <master-device/>
+          </user-group-source>
+          <templates>
+            <member>template-vsys1</member>
+          </templates>
+        </entry>
+      </template-stack>
+    </entry>
+  </devices>
+  <readonly>
+    <devices>
+      <entry name="localhost.localdomain">
+        <device-group>
+          <entry name="Device-Group-1">
+            <id>11</id>
+            <address-group>
+              <entry name="DG1-Group">
+                <id>20</id>
+              </entry>
+              <entry name="Nested-Groups">
+                <id>21</id>
+              </entry>
+            </address-group>
+          </entry>
+          <entry name="Device-Group-2">
+            <id>12</id>
+          </entry>
+          <entry name="DG1-Sub-Group">
+            <parent-dg>Device-Group-1</parent-dg>
+            <id>14</id>
+          </entry>
+        </device-group>
+        <template>
+          <entry name="template-none">
+            <id>13</id>
+          </entry>
+          <entry name="template-vsys1">
+            <id>16</id>
+          </entry>
+        </template>
+        <template-stack>
+          <entry name="template-stack-none">
+            <id>17</id>
+          </entry>
+          <entry name="template-stack-vsys1">
+            <id>18</id>
+          </entry>
+        </template-stack>
+      </entry>
+    </devices>
+    <max-internal-id>21</max-internal-id>
+    <shared>
+      <address-group>
+        <entry name="Shared-Group">
+          <id>19</id>
+        </entry>
+      </address-group>
+    </shared>
+  </readonly>
+</config>

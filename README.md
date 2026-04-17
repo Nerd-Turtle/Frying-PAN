@@ -10,7 +10,8 @@ This is deliberately not infrastructure-as-code tooling. Frying-PAN is a configu
 
 This repository is an initial scaffold.
 
-- Project creation is stubbed in with SQLite-backed metadata.
+- PostgreSQL is the locked primary database target.
+- The current scaffold still contains placeholder persistence code that will be brought into alignment during the early roadmap phases.
 - Source XML upload is scaffolded and stores raw files on disk.
 - Analysis, diff/merge, and export flows are placeholder endpoints and UI sections.
 - There is no production-ready Panorama merge engine here yet.
@@ -20,7 +21,8 @@ This repository is an initial scaffold.
 - Keep Panorama/PAN-OS parsing, normalization, diff, merge, dependency analysis, and export logic in Python on the backend.
 - Keep the frontend focused on UX: project management, uploads, browsing, review workflows, and conflict-resolution interfaces.
 - Store raw uploaded XML files on disk.
-- Store project metadata, source metadata, event history, and workflow state in SQLite.
+- Use PostgreSQL for application data and project workbench state.
+- Keep a clear boundary between Frying-PAN application data and project-scoped Panorama workbench data.
 - Normalize XML into internal canonical models before applying merge or diff logic.
 - Treat XML as an import/export boundary, not as the primary in-memory working model.
 - Prefer a clean, maintainable skeleton over fake completeness.
@@ -99,7 +101,7 @@ frontend/
 3. Open `http://localhost:3000` for the frontend.
 4. Open `http://localhost:8000/docs` for the backend API docs.
 
-The default local setup mounts `./storage` into the backend container so uploaded XML files and SQLite data survive container restarts.
+The default local setup mounts `./storage` into the backend container so uploaded XML files and generated project artifacts survive container restarts.
 
 ## Local Development Notes
 
@@ -112,7 +114,7 @@ Frontend:
 Backend:
 
 - FastAPI
-- SQLite via SQLAlchemy
+- PostgreSQL as the primary database target
 - Raw uploads written to disk under `storage/uploads/`
 - Placeholder parser and merge modules with explicit TODO markers
 
@@ -142,3 +144,4 @@ Only project creation, listing, detail retrieval, and source upload have meaning
 ## Working Agreement
 
 Read [AGENTS.md](/opt/frying-pan/AGENTS.md) before making substantial changes. It defines architecture boundaries and scope guardrails for contributors and coding agents.
+Read [design.md](/opt/frying-pan/docs/devel/design.md) for locked design decisions and [roadmap.md](/opt/frying-pan/docs/devel/roadmap.md) for the current implementation phases.
