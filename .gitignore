@@ -1,0 +1,16 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+
+frontend/node_modules/
+frontend/.next/
+
+storage/uploads/*
+!storage/uploads/.gitkeep
+storage/projects/*
+!storage/projects/.gitkeep
+storage/exports/*
+!storage/exports/.gitkeep

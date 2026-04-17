@@ -1,0 +1,30 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    working_dir: /app/backend
+    environment:
+      FRYING_PAN_STORAGE_ROOT: ${FRYING_PAN_STORAGE_ROOT:-../storage}
+      FRYING_PAN_DATABASE_URL: ${FRYING_PAN_DATABASE_URL:-sqlite:///../storage/projects/frying_pan.db}
+      FRYING_PAN_CORS_ORIGINS: ${FRYING_PAN_CORS_ORIGINS:-http://localhost:3000}
+    volumes:
+      - ./backend:/app/backend
+      - ./storage:/app/storage
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+    command: npm run dev -- --hostname 0.0.0.0 --port 3000
+    working_dir: /app/frontend
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+    volumes:
+      - ./frontend:/app/frontend
+      - /app/frontend/node_modules
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
