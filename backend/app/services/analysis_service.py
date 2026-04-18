@@ -49,6 +49,7 @@ def build_source_inventory(
             project_id=source.project_id,
             event_type="source.indexing.failed",
             payload=f"Source {source.id} failed XML parsing: {exc}",
+            actor_user_id=source.imported_by_user_id,
         )
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -188,6 +189,7 @@ def build_source_inventory(
             f"{len(parse_result.objects)} objects, {len(resolved_references)} references, "
             f"and {len(parse_result.warnings)} warnings."
         ),
+        actor_user_id=source.imported_by_user_id,
     )
 
     return SourceInventorySummary(

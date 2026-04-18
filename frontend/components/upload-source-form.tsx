@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useState } from "react";
+import { ChangeEvent, useRef, useState } from "react";
 
 type UploadSourceFormProps = {
   projectId: string;
@@ -13,6 +13,7 @@ export function UploadSourceForm({
 }: UploadSourceFormProps) {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
     setFile(event.target.files?.[0] ?? null);
@@ -27,6 +28,9 @@ export function UploadSourceForm({
     try {
       await onUpload(projectId, file);
       setFile(null);
+      if (inputRef.current) {
+        inputRef.current.value = "";
+      }
     } finally {
       setBusy(false);
     }
@@ -35,7 +39,17 @@ export function UploadSourceForm({
   return (
     <div style={{ display: "grid", gap: 10 }}>
       <label style={{ fontWeight: 600 }}>Upload source XML</label>
-      <input type="file" accept=".xml,text/xml,application/xml" onChange={handleChange} />
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".xml,text/xml,application/xml"
+        onChange={handleChange}
+      />
+      {file ? (
+        <div style={{ color: "var(--muted)", fontSize: 14 }}>
+          Selected: <strong>{file.name}</strong>
+        </div>
+      ) : null}
       <button
         type="button"
         onClick={handleUpload}

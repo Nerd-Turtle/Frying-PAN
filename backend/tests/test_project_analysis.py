@@ -9,6 +9,7 @@ from app.db.session import SessionLocal
 from app.main import app
 from app.models.config_object import ConfigObject
 from app.models.scope import Scope
+from tests.support import register_and_login
 
 
 EXAMPLE_XML_PATH = Path("/opt/frying-pan/Example-1.xml")
@@ -23,6 +24,7 @@ def test_project_analysis_reports_duplicate_name_value_and_normalization_finding
     xml_bytes = EXAMPLE_XML_PATH.read_bytes()
 
     with _client() as client:
+        register_and_login(client)
         project_response = client.post(
             "/api/projects",
             json={"name": project_name, "description": "Phase 4 analysis test"},
@@ -76,6 +78,7 @@ def test_project_analysis_filters_by_source_scope_and_object_type_without_mutati
     """
 
     with _client() as client:
+        register_and_login(client)
         project_response = client.post(
             "/api/projects",
             json={"name": project_name, "description": "Filter behavior test"},
@@ -135,6 +138,7 @@ def test_project_analysis_reports_promotion_candidates_and_blockers() -> None:
     xml_bytes = EXAMPLE_XML_PATH.read_bytes()
 
     with _client() as client:
+        register_and_login(client)
         project_response = client.post(
             "/api/projects",
             json={"name": project_name, "description": "Promotion analysis test"},

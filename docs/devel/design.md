@@ -93,6 +93,15 @@ Example:
 
 This boundary is important because auth and collaboration rules should not leak into Panorama object parsing or merge semantics.
 
+### Application Access Model
+
+- Frying-PAN uses a minimal application-layer identity model.
+- Users authenticate with local email/password accounts in the backend.
+- Authentication state is maintained with backend-issued, database-backed session cookies.
+- New users are bootstrapped into a personal organization automatically so project ownership has a clean boundary from the start.
+- Project access is enforced through `project_memberships`, not by embedding auth rules into workbench tables.
+- This is intentionally a lightweight v1 approach and should not be expanded into SSO, external identity providers, or complex RBAC unless the product scope explicitly calls for it.
+
 ### Storage Model
 
 - Raw XML files stay on disk, not primarily in the database.
@@ -249,6 +258,22 @@ Suggested columns:
 - `user_id` `uuid` FK -> `users.id`
 - `role` `text`
 - `created_at` `timestamptz`
+
+#### `app_sessions`
+
+Purpose:
+
+- backend-issued session state for authenticated browser access
+- explicit logout and session expiry without pushing auth details into workbench tables
+
+Suggested columns:
+
+- `id` `uuid` PK
+- `user_id` `uuid` FK -> `users.id`
+- `token_hash` `text` unique
+- `expires_at` `timestamptz`
+- `created_at` `timestamptz`
+- `last_seen_at` `timestamptz`
 
 #### `audit_events`
 

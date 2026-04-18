@@ -12,11 +12,12 @@ from app.models.change_set import ChangeSet
 from app.models.config_object import ConfigObject
 from app.models.config_reference import ConfigReference
 from app.models.scope import Scope
+from app.models.user import User
 from app.models.working_object import WorkingObject
 from app.models.working_reference import WorkingReference
 
 
-def apply_change_set(db: Session, change_set: ChangeSet) -> ChangeSet:
+def apply_change_set(db: Session, change_set: ChangeSet, actor: User | None = None) -> ChangeSet:
     blocked_objects = change_set.operations_payload.get("blocked_objects", [])
     if blocked_objects:
         raise HTTPException(
@@ -37,6 +38,7 @@ def apply_change_set(db: Session, change_set: ChangeSet) -> ChangeSet:
 
         change_set.status = "applied"
         change_set.applied_at = datetime.now(timezone.utc)
+        change_set.applied_by_user_id = actor.id if actor is not None else change_set.applied_by_user_id
         db.add(change_set)
         db.commit()
         db.refresh(change_set)

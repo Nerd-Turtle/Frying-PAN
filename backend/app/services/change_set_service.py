@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.change_set import ChangeSet
+from app.models.user import User
 from app.schemas.change_set import ChangeSetCreate
 from app.services.project_service import get_project_or_404
 
@@ -16,13 +17,15 @@ def create_change_set(
     db: Session,
     project_id: str,
     payload: ChangeSetCreate,
+    actor: User,
     status_value: str = "draft",
     preview_summary: dict | None = None,
     operations_payload: dict | None = None,
 ) -> ChangeSet:
-    get_project_or_404(db, project_id)
+    get_project_or_404(db, project_id, user_id=actor.id)
     change_set = ChangeSet(
         project_id=project_id,
+        created_by_user_id=actor.id,
         name=payload.name.strip(),
         description=payload.description,
         status=status_value,
@@ -50,8 +53,9 @@ def get_change_set_or_404(db: Session, project_id: str, change_set_id: str) -> C
 
 
 def update_change_set_status(
-    db: Session, project_id: str, change_set_id: str, new_status: str
+    db: Session, project_id: str, change_set_id: str, new_status: str, actor: User
 ) -> ChangeSet:
+    get_project_or_404(db, project_id, user_id=actor.id)
     change_set = get_change_set_or_404(db, project_id, change_set_id)
     if new_status not in ALLOWED_CHANGE_SET_STATUSES:
         raise HTTPException(

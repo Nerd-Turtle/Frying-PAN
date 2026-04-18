@@ -6,6 +6,7 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from app.main import app
+from tests.support import register_and_login
 
 
 def _client() -> TestClient:
@@ -16,6 +17,7 @@ def test_project_create_list_and_detail_round_trip() -> None:
     project_name = f"project-{uuid4()}"
 
     with _client() as client:
+        register_and_login(client)
         create_response = client.post(
             "/api/projects",
             json={
@@ -53,6 +55,7 @@ def test_source_upload_persists_metadata_file_and_events() -> None:
     expected_sha256 = hashlib.sha256(file_bytes).hexdigest()
 
     with _client() as client:
+        register_and_login(client)
         project_response = client.post(
             "/api/projects",
             json={"name": project_name, "description": "Upload test"},
@@ -92,6 +95,7 @@ def test_duplicate_source_upload_is_rejected_by_checksum() -> None:
     file_bytes = b"<config><shared><service /></shared></config>"
 
     with _client() as client:
+        register_and_login(client)
         project_response = client.post(
             "/api/projects",
             json={"name": project_name, "description": "Duplicate upload test"},

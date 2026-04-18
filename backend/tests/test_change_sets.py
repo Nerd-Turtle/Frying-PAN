@@ -13,6 +13,7 @@ from app.models.scope import Scope
 from app.models.working_object import WorkingObject
 from app.models.working_reference import WorkingReference
 from app.main import app
+from tests.support import register_and_login
 
 
 EXAMPLE_XML_PATH = Path("/opt/frying-pan/Example-1.xml")
@@ -26,6 +27,7 @@ def test_change_set_create_read_and_status_transition_validation() -> None:
     project_name = f"project-{uuid4()}"
 
     with _client() as client:
+        register_and_login(client)
         project_response = client.post(
             "/api/projects",
             json={"name": project_name, "description": "Change set lifecycle test"},
@@ -66,6 +68,7 @@ def test_merge_preview_plans_promotions_rewrites_and_selected_normalizations() -
     xml_bytes = EXAMPLE_XML_PATH.read_bytes()
 
     with _client() as client:
+        register_and_login(client)
         project_response = client.post(
             "/api/projects",
             json={"name": project_name, "description": "Merge preview planning test"},
@@ -158,6 +161,7 @@ def test_merge_preview_records_blockers_for_unsafe_plans() -> None:
     xml_bytes = EXAMPLE_XML_PATH.read_bytes()
 
     with _client() as client:
+        register_and_login(client)
         project_response = client.post(
             "/api/projects",
             json={"name": project_name, "description": "Unsafe preview test"},
@@ -208,6 +212,7 @@ def test_apply_change_set_preserves_imported_state_and_updates_working_state_tra
     xml_bytes = EXAMPLE_XML_PATH.read_bytes()
 
     with _client() as client:
+        register_and_login(client)
         project_response = client.post(
             "/api/projects",
             json={"name": project_name, "description": "Apply engine success test"},
@@ -316,6 +321,7 @@ def test_apply_change_set_failure_rolls_back_working_state_changes() -> None:
     xml_bytes = EXAMPLE_XML_PATH.read_bytes()
 
     with _client() as client:
+        register_and_login(client)
         project_response = client.post(
             "/api/projects",
             json={"name": project_name, "description": "Apply engine rollback test"},

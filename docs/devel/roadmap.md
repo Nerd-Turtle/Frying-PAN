@@ -623,11 +623,15 @@ Goal:
 
 Status:
 
-- `todo`
+- `pass`
 
 Tasks:
 
 ### 8.1 Project and source management UI
+
+Status:
+
+- `pass`
 
 Work:
 
@@ -647,6 +651,10 @@ Suggested validation/tests:
 
 ### 8.2 Analysis and comparison UI
 
+Status:
+
+- `pass`
+
 Work:
 
 - duplicate views
@@ -664,6 +672,10 @@ Suggested validation/tests:
 - manual validation against `Example-1.xml` findings
 
 ### 8.3 Change preview and apply UI
+
+Status:
+
+- `pass`
 
 Work:
 
@@ -689,11 +701,15 @@ Goal:
 
 Status:
 
-- `todo`
+- `pass`
 
 Tasks:
 
 ### 9.1 Users, organizations, and memberships
+
+Status:
+
+- `pass`
 
 Work:
 
@@ -713,6 +729,10 @@ Suggested validation/tests:
 
 ### 9.2 Authentication and session flow
 
+Status:
+
+- `pass`
+
 Work:
 
 - add chosen auth/session approach
@@ -729,6 +749,10 @@ Suggested validation/tests:
 - session lifecycle tests
 
 ### 9.3 Audit expansion for multi-user changes
+
+Status:
+
+- `pass`
 
 Work:
 

@@ -1,6 +1,7 @@
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
+from app.models.user import User
 from app.schemas.source import SourceRead
 from app.services.analysis_service import build_source_inventory
 from app.services.event_service import log_project_event
@@ -8,10 +9,8 @@ from app.services.project_service import create_source_record, get_project_or_40
 from app.services.storage_service import delete_stored_file, save_uploaded_source_file
 
 
-def import_source_upload(
-    db: Session, project_id: str, upload: UploadFile
-) -> SourceRead:
-    project = get_project_or_404(db, project_id)
+def import_source_upload(db: Session, project_id: str, upload: UploadFile, actor: User) -> SourceRead:
+    project = get_project_or_404(db, project_id, user_id=actor.id)
 
     if not upload.filename:
         raise HTTPException(
@@ -29,6 +28,7 @@ def import_source_upload(
             filename=stored_upload.filename,
             storage_path=stored_upload.storage_path,
             file_sha256=stored_upload.file_sha256,
+            imported_by_user_id=actor.id,
         )
     except HTTPException as exc:
         delete_stored_file(stored_upload.storage_path)
@@ -42,6 +42,7 @@ def import_source_upload(
                     f"Rejected duplicate source '{stored_upload.filename}' "
                     f"with checksum '{stored_upload.file_sha256}'."
                 ),
+                actor_user_id=actor.id,
             )
 
         raise

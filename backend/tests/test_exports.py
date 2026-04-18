@@ -11,6 +11,7 @@ from app.main import app
 from app.models.config_object import ConfigObject
 from app.models.export_record import ExportRecord
 from app.models.scope import Scope
+from tests.support import register_and_login
 
 
 EXAMPLE_XML_PATH = Path("/opt/frying-pan/Example-1.xml")
@@ -25,6 +26,7 @@ def test_export_generates_well_formed_xml_from_applied_working_state() -> None:
     xml_bytes = EXAMPLE_XML_PATH.read_bytes()
 
     with _client() as client:
+        register_and_login(client)
         project_response = client.post(
             "/api/projects",
             json={"name": project_name, "description": "Export generation test"},
@@ -129,6 +131,7 @@ def test_export_rejects_unapplied_change_set() -> None:
     xml_bytes = EXAMPLE_XML_PATH.read_bytes()
 
     with _client() as client:
+        register_and_login(client)
         project_response = client.post(
             "/api/projects",
             json={"name": project_name, "description": "Export validation test"},

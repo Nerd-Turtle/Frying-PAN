@@ -65,7 +65,7 @@ Do not overbuild these areas in v1:
 - queueing infrastructure
 - distributed workers
 - Redis / Celery / RQ
-- auth / SSO / RBAC
+- auth / SSO / RBAC beyond the current minimal local-account and session-cookie baseline
 - multi-service decomposition
 - fake enterprise abstractions
 

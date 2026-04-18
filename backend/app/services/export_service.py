@@ -27,7 +27,10 @@ SUPPORTED_EXPORT_TYPES = {
 
 
 def generate_project_export(
-    db: Session, project_id: str, change_set_id: str | None = None
+    db: Session,
+    project_id: str,
+    change_set_id: str | None = None,
+    created_by_user_id: str | None = None,
 ) -> ExportRecord:
     change_set: ChangeSet | None = None
     if change_set_id is not None:
@@ -57,6 +60,7 @@ def generate_project_export(
         db=db,
         project_id=project_id,
         change_set_id=change_set.id if change_set is not None else None,
+        created_by_user_id=created_by_user_id,
         xml_bytes=xml_bytes,
         metadata=metadata,
     )
@@ -185,6 +189,7 @@ def _store_export_artifact(
     db: Session,
     project_id: str,
     change_set_id: str | None,
+    created_by_user_id: str | None,
     xml_bytes: bytes,
     metadata: dict,
 ) -> ExportRecord:
@@ -199,6 +204,7 @@ def _store_export_artifact(
     digest = hashlib.sha256(xml_bytes).hexdigest()
     export_record = ExportRecord(
         project_id=project_id,
+        created_by_user_id=created_by_user_id,
         change_set_id=change_set_id,
         filename=filename,
         storage_path=str(storage_path),

@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 
+from app.models.user import User
 from app.schemas.analysis import AnalysisFilters, AnalysisRunResponse
 from app.schemas.change_set import (
     ChangeSetCreate,
@@ -21,9 +22,9 @@ from app.services.project_service import get_project_or_404
 
 
 def request_project_analysis(
-    db: Session, project_id: str, filters: AnalysisFilters
+    db: Session, project_id: str, filters: AnalysisFilters, actor: User
 ) -> AnalysisRunResponse:
-    project = get_project_or_404(db, project_id)
+    project = get_project_or_404(db, project_id, user_id=actor.id)
     report = generate_project_analysis_report(db=db, project_id=project.id, filters=filters)
     log_project_event(
         db=db,
@@ -37,6 +38,7 @@ def request_project_analysis(
             f"{len(report.promotion_candidates)} promotion candidates, and "
             f"{len(report.promotion_blockers)} promotion blockers."
         ),
+        actor_user_id=actor.id,
     )
     return AnalysisRunResponse(
         status="ok",
@@ -46,9 +48,9 @@ def request_project_analysis(
 
 
 def request_merge_preview(
-    db: Session, project_id: str, payload: MergePreviewRequest
+    db: Session, project_id: str, payload: MergePreviewRequest, actor: User
 ) -> ChangeSetRead:
-    project = get_project_or_404(db, project_id)
+    project = get_project_or_404(db, project_id, user_id=actor.id)
     preview_plan = MergeWorkbench().preview(
         db=db,
         project_id=project.id,
@@ -64,6 +66,7 @@ def request_merge_preview(
     change_set = create_change_set(
         db=db,
         project_id=project.id,
+        actor=actor,
         payload=ChangeSetCreate(name=payload.name, description=payload.description),
         status_value="preview",
         preview_summary=preview_plan.preview_summary,
@@ -80,56 +83,60 @@ def request_merge_preview(
             f"{change_set.preview_summary.get('normalization_count', 0)} normalization operations, "
             f"and {change_set.preview_summary.get('blocked_object_count', 0)} blocked objects."
         ),
+        actor_user_id=actor.id,
     )
     return change_set
 
 
 def request_change_set_create(
-    db: Session, project_id: str, payload: ChangeSetCreate
+    db: Session, project_id: str, payload: ChangeSetCreate, actor: User
 ) -> ChangeSetRead:
-    project = get_project_or_404(db, project_id)
-    change_set = create_change_set(db=db, project_id=project.id, payload=payload)
+    project = get_project_or_404(db, project_id, user_id=actor.id)
+    change_set = create_change_set(db=db, project_id=project.id, payload=payload, actor=actor)
     log_project_event(
         db=db,
         project_id=project.id,
         event_type="change_set.created",
         payload=f"Created draft change set {change_set.id}.",
+        actor_user_id=actor.id,
     )
     return change_set
 
 
 def request_change_set_read(
-    db: Session, project_id: str, change_set_id: str
+    db: Session, project_id: str, change_set_id: str, actor: User
 ) -> ChangeSetRead:
-    get_project_or_404(db, project_id)
+    get_project_or_404(db, project_id, user_id=actor.id)
     return get_change_set_or_404(db, project_id, change_set_id)
 
 
 def request_change_set_status_update(
-    db: Session, project_id: str, change_set_id: str, new_status: str
+    db: Session, project_id: str, change_set_id: str, new_status: str, actor: User
 ) -> ChangeSetRead:
-    project = get_project_or_404(db, project_id)
+    project = get_project_or_404(db, project_id, user_id=actor.id)
     change_set = update_change_set_status(
         db=db,
         project_id=project.id,
         change_set_id=change_set_id,
         new_status=new_status,
+        actor=actor,
     )
     log_project_event(
         db=db,
         project_id=project.id,
         event_type="change_set.status.updated",
         payload=f"Updated change set {change_set.id} to status '{change_set.status}'.",
+        actor_user_id=actor.id,
     )
     return change_set
 
 
 def request_change_set_apply(
-    db: Session, project_id: str, change_set_id: str
+    db: Session, project_id: str, change_set_id: str, actor: User
 ) -> ChangeSetRead:
-    project = get_project_or_404(db, project_id)
+    project = get_project_or_404(db, project_id, user_id=actor.id)
     change_set = get_change_set_or_404(db, project_id, change_set_id)
-    applied_change_set = apply_change_set(db=db, change_set=change_set)
+    applied_change_set = apply_change_set(db=db, change_set=change_set, actor=actor)
     log_project_event(
         db=db,
         project_id=project.id,
@@ -140,18 +147,20 @@ def request_change_set_apply(
             f"{applied_change_set.preview_summary.get('reference_rewrite_count', 0)} reference rewrites, "
             f"and {applied_change_set.preview_summary.get('normalization_count', 0)} normalization operations."
         ),
+        actor_user_id=actor.id,
     )
     return applied_change_set
 
 
 def request_export_generation(
-    db: Session, project_id: str, payload: ExportRequest
+    db: Session, project_id: str, payload: ExportRequest, actor: User
 ) -> ExportRead:
-    project = get_project_or_404(db, project_id)
+    project = get_project_or_404(db, project_id, user_id=actor.id)
     export_record = generate_project_export(
         db=db,
         project_id=project.id,
         change_set_id=payload.change_set_id,
+        created_by_user_id=actor.id,
     )
     log_project_event(
         db=db,
@@ -165,5 +174,6 @@ def request_export_generation(
                 else "."
             )
         ),
+        actor_user_id=actor.id,
     )
     return export_record

@@ -12,6 +12,7 @@ from app.models.config_reference import ConfigReference
 from app.models.parse_warning import ParseWarning
 from app.models.scope import Scope
 from app.parsers.panorama_xml import PanoramaXmlParser
+from tests.support import register_and_login
 
 
 EXAMPLE_XML_PATH = Path("/opt/frying-pan/Example-1.xml")
@@ -80,6 +81,7 @@ def test_example_xml_upload_persists_scope_object_and_warning_rows() -> None:
     xml_bytes = EXAMPLE_XML_PATH.read_bytes()
 
     with _client() as client:
+        register_and_login(client)
         project_response = client.post(
             "/api/projects",
             json={"name": project_name, "description": "Phase 2 import test"},
