@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="frontend/public/branding/logo-readme.png" alt="Frying-PAN logo" width="480">
+  <img src="frontend/public/branding/logo-readme.png" alt="Frying-PAN logo">
 </p>
 
 <p align="center">Panorama / PAN-OS configuration merge and migration workbench</p>
