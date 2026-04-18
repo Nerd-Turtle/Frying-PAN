@@ -17,6 +17,8 @@ frontend/test-results/
 frontend/node_modules/
 frontend/.next/
 
+Example-1.xml
+
 storage/uploads/*
 !storage/uploads/.gitkeep
 storage/projects/*
