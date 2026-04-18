@@ -455,6 +455,26 @@ Suggested early indexes:
 - Keep imported source state distinct from user-approved change state.
 - Split specialized subtype tables later only when real query or workflow pressure justifies them.
 
+## Working-State Mutation Model
+
+Imported source state remains immutable for planning purposes.
+
+Phase 6 introduces a separate working-state layer so approved changes can be applied without overwriting imported source rows:
+
+- `objects` and `references` remain the imported canonical inventory derived from source XML
+- `working_objects` and `working_references` represent the current mutable project working state
+- working rows keep provenance through `source_object_id` and `source_reference_id`
+- working rows also record `last_change_set_id` so applied changes remain auditable
+
+Working-state behavior:
+
+- the first successful apply clones the full imported object/reference graph into working-state tables for that project
+- later applies mutate only the working-state layer
+- imported rows continue to preserve original source payloads, scope provenance, and reference resolution history
+- change-set apply is transactional: either the working-state mutations and change-set status update all commit, or the project remains unchanged
+
+This model keeps source provenance intact while creating a stable backend-owned state for future export generation.
+
 ## V1 Canonical Records
 
 The first parser and persistence pass should use a small set of canonical record shapes derived from the sample Panorama XML.

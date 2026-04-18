@@ -510,11 +510,15 @@ Goal:
 
 Status:
 
-- `todo`
+- `pass`
 
 Tasks:
 
 ### 6.1 Define working-state mutation model
+
+Status:
+
+- `pass`
 
 Work:
 
@@ -532,6 +536,10 @@ Suggested validation/tests:
 - service tests for immutable source preservation
 
 ### 6.2 Apply promote-to-shared and reference rewrite operations transactionally
+
+Status:
+
+- `pass`
 
 Work:
 

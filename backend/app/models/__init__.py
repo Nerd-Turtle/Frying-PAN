@@ -6,6 +6,8 @@ from app.models.parse_warning import ParseWarning
 from app.models.project import Project
 from app.models.scope import Scope
 from app.models.source import Source
+from app.models.working_object import WorkingObject
+from app.models.working_reference import WorkingReference
 
 __all__ = [
     "ChangeSet",
@@ -16,4 +18,6 @@ __all__ = [
     "Project",
     "Scope",
     "Source",
+    "WorkingObject",
+    "WorkingReference",
 ]

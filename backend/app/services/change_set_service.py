@@ -58,11 +58,6 @@ def update_change_set_status(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Unsupported change set status.",
         )
-    if new_status == "applied":
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Apply lifecycle state is reserved until Phase 6.",
-        )
     if change_set.status == new_status:
         return change_set
     if {change_set.status, new_status} - {"draft", "preview"}:

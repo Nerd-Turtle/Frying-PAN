@@ -8,6 +8,7 @@ from app.schemas.change_set import (
 )
 from app.schemas.project import PlaceholderActionResponse
 from app.merge.workbench import MergeWorkbench, NormalizationSelectionRecord
+from app.services.apply_service import apply_change_set
 from app.services.change_set_service import (
     create_change_set,
     get_change_set_or_404,
@@ -120,6 +121,26 @@ def request_change_set_status_update(
         payload=f"Updated change set {change_set.id} to status '{change_set.status}'.",
     )
     return change_set
+
+
+def request_change_set_apply(
+    db: Session, project_id: str, change_set_id: str
+) -> ChangeSetRead:
+    project = get_project_or_404(db, project_id)
+    change_set = get_change_set_or_404(db, project_id, change_set_id)
+    applied_change_set = apply_change_set(db=db, change_set=change_set)
+    log_project_event(
+        db=db,
+        project_id=project.id,
+        event_type="change_set.applied",
+        payload=(
+            f"Applied change set {applied_change_set.id} with "
+            f"{applied_change_set.preview_summary.get('planned_object_count', 0)} object operations, "
+            f"{applied_change_set.preview_summary.get('reference_rewrite_count', 0)} reference rewrites, "
+            f"and {applied_change_set.preview_summary.get('normalization_count', 0)} normalization operations."
+        ),
+    )
+    return applied_change_set
 
 
 def request_export_generation(

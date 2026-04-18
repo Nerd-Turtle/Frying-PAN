@@ -12,6 +12,7 @@ from app.schemas.change_set import (
 from app.schemas.project import PlaceholderActionResponse
 from app.services.workbench_service import (
     request_export_generation,
+    request_change_set_apply,
     request_change_set_create,
     request_change_set_read,
     request_change_set_status_update,
@@ -70,6 +71,19 @@ def update_change_set_status_endpoint(
         project_id=project_id,
         change_set_id=change_set_id,
         new_status=payload.status,
+    )
+
+
+@router.post("/{project_id}/change-sets/{change_set_id}/apply", response_model=ChangeSetRead)
+def apply_change_set_endpoint(
+    project_id: str,
+    change_set_id: str,
+    db: Session = Depends(get_db),
+) -> ChangeSetRead:
+    return request_change_set_apply(
+        db=db,
+        project_id=project_id,
+        change_set_id=change_set_id,
     )
 
 
