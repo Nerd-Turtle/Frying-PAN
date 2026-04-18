@@ -434,11 +434,15 @@ Goal:
 
 Status:
 
-- `todo`
+- `pass`
 
 Tasks:
 
 ### 5.1 Implement `change_sets` persistence and status flow
+
+Status:
+
+- `pass`
 
 Work:
 
@@ -457,6 +461,10 @@ Suggested validation/tests:
 
 ### 5.2 Build promote-to-shared preview planning
 
+Status:
+
+- `pass`
+
 Work:
 
 - given selected objects, compute required object moves/promotions
@@ -474,6 +482,10 @@ Suggested validation/tests:
 - integration test using `Example-1.xml`-derived records
 
 ### 5.3 Add user-approved normalization changes to change-set planning
+
+Status:
+
+- `pass`
 
 Work:
 

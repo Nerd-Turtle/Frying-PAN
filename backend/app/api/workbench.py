@@ -3,9 +3,18 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.schemas.analysis import AnalysisFilters, AnalysisRunResponse
+from app.schemas.change_set import (
+    ChangeSetCreate,
+    ChangeSetRead,
+    ChangeSetStatusUpdate,
+    MergePreviewRequest,
+)
 from app.schemas.project import PlaceholderActionResponse
 from app.services.workbench_service import (
     request_export_generation,
+    request_change_set_create,
+    request_change_set_read,
+    request_change_set_status_update,
     request_merge_preview,
     request_project_analysis,
 )
@@ -31,10 +40,46 @@ def run_analysis(
         ),
     )
 
+@router.post("/{project_id}/change-sets", response_model=ChangeSetRead)
+def create_change_set_endpoint(
+    project_id: str,
+    payload: ChangeSetCreate,
+    db: Session = Depends(get_db),
+) -> ChangeSetRead:
+    return request_change_set_create(db=db, project_id=project_id, payload=payload)
 
-@router.post("/{project_id}/merge/preview", response_model=PlaceholderActionResponse)
-def preview_merge(project_id: str, db: Session = Depends(get_db)) -> PlaceholderActionResponse:
-    return request_merge_preview(db=db, project_id=project_id)
+
+@router.get("/{project_id}/change-sets/{change_set_id}", response_model=ChangeSetRead)
+def get_change_set_endpoint(
+    project_id: str,
+    change_set_id: str,
+    db: Session = Depends(get_db),
+) -> ChangeSetRead:
+    return request_change_set_read(db=db, project_id=project_id, change_set_id=change_set_id)
+
+
+@router.patch("/{project_id}/change-sets/{change_set_id}/status", response_model=ChangeSetRead)
+def update_change_set_status_endpoint(
+    project_id: str,
+    change_set_id: str,
+    payload: ChangeSetStatusUpdate,
+    db: Session = Depends(get_db),
+) -> ChangeSetRead:
+    return request_change_set_status_update(
+        db=db,
+        project_id=project_id,
+        change_set_id=change_set_id,
+        new_status=payload.status,
+    )
+
+
+@router.post("/{project_id}/merge/preview", response_model=ChangeSetRead)
+def preview_merge(
+    project_id: str,
+    payload: MergePreviewRequest,
+    db: Session = Depends(get_db),
+) -> ChangeSetRead:
+    return request_merge_preview(db=db, project_id=project_id, payload=payload)
 
 
 @router.post("/{project_id}/exports", response_model=PlaceholderActionResponse)
