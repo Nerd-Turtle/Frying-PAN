@@ -2,8 +2,6 @@
   <img src="frontend/public/branding/logo.png" alt="Frying-PAN logo" width="480">
 </p>
 
-<h1 align="center">Frying-PAN</h1>
-
 <p align="center">Panorama / PAN-OS configuration merge and migration workbench</p>
 
 Frying-PAN is a web-based Panorama / PAN-OS configuration merge and migration workbench.
