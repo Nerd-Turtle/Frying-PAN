@@ -10,6 +10,7 @@ from app.models import (
     ConfigObject,
     ConfigReference,
     EventRecord,
+    ExportRecord,
     ParseWarning,
     Project,
     Scope,

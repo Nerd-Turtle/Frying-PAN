@@ -567,11 +567,15 @@ Goal:
 
 Status:
 
-- `todo`
+- `pass`
 
 Tasks:
 
 ### 7.1 Define export model and serialization boundary
+
+Status:
+
+- `pass`
 
 Work:
 
@@ -589,6 +593,10 @@ Suggested validation/tests:
 - serializer unit tests for v1 object types
 
 ### 7.2 Generate v1 export for supported object types
+
+Status:
+
+- `pass`
 
 Work:
 

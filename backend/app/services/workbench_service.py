@@ -6,7 +6,7 @@ from app.schemas.change_set import (
     ChangeSetRead,
     MergePreviewRequest,
 )
-from app.schemas.project import PlaceholderActionResponse
+from app.schemas.export import ExportRead, ExportRequest
 from app.merge.workbench import MergeWorkbench, NormalizationSelectionRecord
 from app.services.apply_service import apply_change_set
 from app.services.change_set_service import (
@@ -16,6 +16,7 @@ from app.services.change_set_service import (
 )
 from app.services.project_analysis_service import generate_project_analysis_report
 from app.services.event_service import log_project_event
+from app.services.export_service import generate_project_export
 from app.services.project_service import get_project_or_404
 
 
@@ -144,19 +145,25 @@ def request_change_set_apply(
 
 
 def request_export_generation(
-    db: Session, project_id: str
-) -> PlaceholderActionResponse:
+    db: Session, project_id: str, payload: ExportRequest
+) -> ExportRead:
     project = get_project_or_404(db, project_id)
+    export_record = generate_project_export(
+        db=db,
+        project_id=project.id,
+        change_set_id=payload.change_set_id,
+    )
     log_project_event(
         db=db,
         project_id=project.id,
-        event_type="export.requested",
-        payload="TODO: implement XML export from normalized internal models",
-    )
-    return PlaceholderActionResponse(
-        status="placeholder",
-        message=(
-            "Export generation is not implemented yet. "
-            "This will later render XML from canonical backend models."
+        event_type="export.generated",
+        payload=(
+            f"Generated export {export_record.id} for project {project.id}"
+            + (
+                f" from applied change set {export_record.change_set_id}."
+                if export_record.change_set_id is not None
+                else "."
+            )
         ),
     )
+    return export_record

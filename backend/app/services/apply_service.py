@@ -30,7 +30,7 @@ def apply_change_set(db: Session, change_set: ChangeSet) -> ChangeSet:
         )
 
     try:
-        _ensure_working_state_baseline(db=db, project_id=change_set.project_id)
+        ensure_working_state_baseline(db=db, project_id=change_set.project_id)
         _apply_object_operations(db=db, change_set=change_set)
         _apply_reference_rewrites(db=db, change_set=change_set)
         _apply_normalization_operations(db=db, change_set=change_set)
@@ -53,7 +53,7 @@ def apply_change_set(db: Session, change_set: ChangeSet) -> ChangeSet:
     return change_set
 
 
-def _ensure_working_state_baseline(db: Session, project_id: str) -> None:
+def ensure_working_state_baseline(db: Session, project_id: str) -> None:
     existing = db.scalars(
         select(WorkingObject.id).where(WorkingObject.project_id == project_id).limit(1)
     ).first()

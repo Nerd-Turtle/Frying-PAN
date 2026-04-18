@@ -9,7 +9,7 @@ from app.schemas.change_set import (
     ChangeSetStatusUpdate,
     MergePreviewRequest,
 )
-from app.schemas.project import PlaceholderActionResponse
+from app.schemas.export import ExportRead, ExportRequest
 from app.services.workbench_service import (
     request_export_generation,
     request_change_set_apply,
@@ -40,6 +40,7 @@ def run_analysis(
             scope_path=scope_path,
         ),
     )
+
 
 @router.post("/{project_id}/change-sets", response_model=ChangeSetRead)
 def create_change_set_endpoint(
@@ -96,6 +97,14 @@ def preview_merge(
     return request_merge_preview(db=db, project_id=project_id, payload=payload)
 
 
-@router.post("/{project_id}/exports", response_model=PlaceholderActionResponse)
-def export_project(project_id: str, db: Session = Depends(get_db)) -> PlaceholderActionResponse:
-    return request_export_generation(db=db, project_id=project_id)
+@router.post("/{project_id}/exports", response_model=ExportRead)
+def export_project(
+    project_id: str,
+    payload: ExportRequest | None = None,
+    db: Session = Depends(get_db),
+) -> ExportRead:
+    return request_export_generation(
+        db=db,
+        project_id=project_id,
+        payload=payload or ExportRequest(),
+    )

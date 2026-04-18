@@ -146,6 +146,11 @@ Examples of useful filters:
 - Export should happen from canonical transformed backend state.
 - Export should not depend on brittle text replacement against the original XML.
 - Round-trip traceability back to original sources should be preserved where practical.
+- V1 export should serialize from project working state, not directly from immutable imported inventory rows.
+- V1 export should materialize only the currently supported object types.
+- Builtin references should remain literal member values in serialized XML rather than being emitted as standalone objects.
+- Unsupported or untouched imported XML sections should be considered intentionally out of scope for the v1 serializer and tracked through export metadata rather than ad hoc passthrough surgery.
+- Device groups in v1 export should be emitted as Panorama `device-group` entries under the device root, with hierarchy preserved in canonical scope metadata instead of nested XML rewriting.
 
 ## Schema Direction
 
@@ -411,6 +416,30 @@ Notes:
 - A change set is the right initial abstraction for “promote to shared and rewrite dependent references.”
 - Users think in batches of reviewed changes more naturally than isolated atomic operations.
 
+#### `exports`
+
+Purpose:
+
+- persist generated XML artifacts produced from project working state
+- maintain traceability between a project, an optional applied change set, and the generated file on disk
+
+Suggested columns:
+
+- `id` `uuid` PK
+- `project_id` `uuid` FK -> `projects.id`
+- `change_set_id` `uuid` null FK -> `change_sets.id`
+- `filename` `text`
+- `storage_path` `text`
+- `file_sha256` `text`
+- `export_status` `text`
+- `metadata` `jsonb`
+- `created_at` `timestamptz`
+
+Notes:
+
+- export rows are bookkeeping records for artifacts written to disk, not substitutes for canonical object inventory
+- export metadata should capture serializer version, object/scope counts, and any intentionally unsupported export boundary details
+
 ### Schema Boundary Rule
 
 The app layer should know:
@@ -474,6 +503,12 @@ Working-state behavior:
 - change-set apply is transactional: either the working-state mutations and change-set status update all commit, or the project remains unchanged
 
 This model keeps source provenance intact while creating a stable backend-owned state for future export generation.
+
+Export generation behavior:
+
+- export reads from `working_objects`, not directly from `objects`
+- export artifacts are written to disk and recorded in the `exports` table
+- export may optionally be tied back to the applied `change_set` that produced the working state being serialized
 
 ## V1 Canonical Records
 
