@@ -10,3 +10,4 @@ class SessionRead(BaseModel):
     user: UserRead
     organizations: list[OrganizationRead] = Field(default_factory=list)
     session_expires_at: datetime
+    password_change_required: bool

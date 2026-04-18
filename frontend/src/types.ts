@@ -5,9 +5,12 @@ export type HealthResponse = {
 
 export type UserRecord = {
   id: string;
-  email: string;
+  username: string;
+  email?: string | null;
   display_name: string;
+  role: string;
   status: string;
+  must_change_password: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -24,6 +27,16 @@ export type AuthSession = {
   user: UserRecord;
   organizations: OrganizationRecord[];
   session_expires_at: string;
+  password_change_required: boolean;
+};
+
+export type AdminUserCreate = {
+  username: string;
+  display_name: string;
+  password: string;
+  email?: string;
+  role?: string;
+  must_change_password?: boolean;
 };
 
 export type Source = {

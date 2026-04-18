@@ -5,109 +5,55 @@ import { useState } from "react";
 
 type AuthPanelProps = {
   busy?: boolean;
-  onRegister: (payload: {
-    email: string;
-    display_name: string;
-    password: string;
-    organization_name?: string;
-  }) => Promise<void>;
-  onLogin: (payload: { email: string; password: string }) => Promise<void>;
+  onLogin: (payload: { username: string; password: string }) => Promise<void>;
 };
 
-export function AuthPanel({ busy = false, onRegister, onLogin }: AuthPanelProps) {
-  const [mode, setMode] = useState<"register" | "login">("register");
-  const [email, setEmail] = useState("");
-  const [displayName, setDisplayName] = useState("");
+export function AuthPanel({ busy = false, onLogin }: AuthPanelProps) {
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [organizationName, setOrganizationName] = useState("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!email.trim() || !password.trim()) {
+    if (!username.trim() || !password.trim()) {
       return;
     }
 
-    if (mode === "register") {
-      if (!displayName.trim()) {
-        return;
-      }
-      await onRegister({
-        email: email.trim(),
-        display_name: displayName.trim(),
-        password: password.trim(),
-        organization_name: organizationName.trim() || undefined,
-      });
-    } else {
-      await onLogin({
-        email: email.trim(),
-        password: password.trim(),
-      });
-    }
+    await onLogin({
+      username: username.trim(),
+      password: password.trim(),
+    });
 
     setPassword("");
   }
 
   return (
-    <section className="workbench-panel">
+    <section className="workbench-panel auth-panel-shell">
       <div className="panel-header">
         <div>
-          <div className="panel-kicker">Access</div>
-          <h2>Sign In To Frying-PAN</h2>
+          <div className="panel-kicker">Login Portal</div>
+          <h2>Sign in to Frying-PAN</h2>
           <p className="panel-copy">
-            Phase 9 adds the first app-layer identity boundary. Sign in to access your
-            projects, uploads, and audit trail.
+            Use a local account to access the Panorama workbench. Fresh installs ship with the
+            bootstrap administrator account <strong>chef</strong>.
           </p>
-        </div>
-        <div className="segmented-toggle">
-          <button
-            type="button"
-            className={mode === "register" ? "segmented-toggle-active" : ""}
-            onClick={() => setMode("register")}
-          >
-            Register
-          </button>
-          <button
-            type="button"
-            className={mode === "login" ? "segmented-toggle-active" : ""}
-            onClick={() => setMode("login")}
-          >
-            Login
-          </button>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="auth-form">
-        <div className="field-grid">
+        <div className="field-grid auth-field-grid">
           <div>
-            <label htmlFor="auth-email" className="field-label">
-              Email
+            <label htmlFor="auth-username" className="field-label">
+              Username
             </label>
             <input
-              id="auth-email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="operator@example.com"
+              id="auth-username"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              placeholder="chef"
               disabled={busy}
               style={inputStyle}
             />
           </div>
-
-          {mode === "register" ? (
-            <div>
-              <label htmlFor="auth-display-name" className="field-label">
-                Display name
-              </label>
-              <input
-                id="auth-display-name"
-                value={displayName}
-                onChange={(event) => setDisplayName(event.target.value)}
-                placeholder="Firewall Team"
-                disabled={busy}
-                style={inputStyle}
-              />
-            </div>
-          ) : null}
 
           <div>
             <label htmlFor="auth-password" className="field-label">
@@ -118,31 +64,15 @@ export function AuthPanel({ busy = false, onRegister, onLogin }: AuthPanelProps)
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              placeholder="At least 8 characters"
+              placeholder="Enter your password"
               disabled={busy}
               style={inputStyle}
             />
           </div>
-
-          {mode === "register" ? (
-            <div>
-              <label htmlFor="auth-organization" className="field-label">
-                Organization name
-              </label>
-              <input
-                id="auth-organization"
-                value={organizationName}
-                onChange={(event) => setOrganizationName(event.target.value)}
-                placeholder="Optional. Defaults to a personal workspace."
-                disabled={busy}
-                style={inputStyle}
-              />
-            </div>
-          ) : null}
         </div>
 
         <button type="submit" disabled={busy} className="primary-button">
-          {busy ? "Working..." : mode === "register" ? "Create account" : "Sign in"}
+          {busy ? "Signing in..." : "Sign in"}
         </button>
       </form>
     </section>

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_ready_user
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.analysis import AnalysisFilters, AnalysisRunResponse
@@ -31,7 +31,7 @@ def run_analysis(
     source_id: str | None = Query(default=None),
     object_type: str | None = Query(default=None),
     scope_path: str | None = Query(default=None),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_ready_user),
     db: Session = Depends(get_db),
 ) -> AnalysisRunResponse:
     return request_project_analysis(
@@ -50,7 +50,7 @@ def run_analysis(
 def create_change_set_endpoint(
     project_id: str,
     payload: ChangeSetCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_ready_user),
     db: Session = Depends(get_db),
 ) -> ChangeSetRead:
     return request_change_set_create(
@@ -65,7 +65,7 @@ def create_change_set_endpoint(
 def get_change_set_endpoint(
     project_id: str,
     change_set_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_ready_user),
     db: Session = Depends(get_db),
 ) -> ChangeSetRead:
     return request_change_set_read(
@@ -81,7 +81,7 @@ def update_change_set_status_endpoint(
     project_id: str,
     change_set_id: str,
     payload: ChangeSetStatusUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_ready_user),
     db: Session = Depends(get_db),
 ) -> ChangeSetRead:
     return request_change_set_status_update(
@@ -97,7 +97,7 @@ def update_change_set_status_endpoint(
 def apply_change_set_endpoint(
     project_id: str,
     change_set_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_ready_user),
     db: Session = Depends(get_db),
 ) -> ChangeSetRead:
     return request_change_set_apply(
@@ -112,7 +112,7 @@ def apply_change_set_endpoint(
 def preview_merge(
     project_id: str,
     payload: MergePreviewRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_ready_user),
     db: Session = Depends(get_db),
 ) -> ChangeSetRead:
     return request_merge_preview(
@@ -127,7 +127,7 @@ def preview_merge(
 def export_project(
     project_id: str,
     payload: ExportRequest | None = None,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_ready_user),
     db: Session = Depends(get_db),
 ) -> ExportRead:
     return request_export_generation(

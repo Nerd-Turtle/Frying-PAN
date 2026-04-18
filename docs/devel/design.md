@@ -95,12 +95,25 @@ This boundary is important because auth and collaboration rules should not leak 
 
 ### Application Access Model
 
-- Frying-PAN uses a minimal application-layer identity model.
-- Users authenticate with local email/password accounts in the backend.
+- Frying-PAN uses a minimal local-user application access model.
+- Users authenticate with backend-managed local username/password accounts, not email-driven self-registration.
 - Authentication state is maintained with backend-issued, database-backed session cookies.
-- New users are bootstrapped into a personal organization automatically so project ownership has a clean boundary from the start.
+- The system should seed a bootstrap administrator account named `chef`.
+- The bootstrap `chef` account should ship with a temporary/default password and a `must_change_password` style first-login requirement rather than an empty-password flow.
+- Public registration should be removed from the landing page.
+- User creation and lifecycle management should happen through an admin-only area after authentication.
+- Roles should remain intentionally small in v1, with a practical split such as `admin` and `operator`.
 - Project access is enforced through `project_memberships`, not by embedding auth rules into workbench tables.
-- This is intentionally a lightweight v1 approach and should not be expanded into SSO, external identity providers, or complex RBAC unless the product scope explicitly calls for it.
+- This is intentionally a lightweight v1 approach and should not be expanded into email integration, SSO, external identity providers, or complex RBAC unless the product scope explicitly calls for it.
+
+### Web UI Access Flow
+
+- The landing page should be a login portal only.
+- The actual project workbench should appear only after authentication succeeds.
+- Pre-auth screens should not show internal implementation markers such as roadmap phase status.
+- Pre-auth screens should not show project inventory or workflow cards that have no meaning before login.
+- Backend availability or authentication failures should surface as clear inline login errors rather than as standalone dashboard-style status cards.
+- Admin-only navigation and user-management UI should only appear for authenticated administrators.
 
 ### Storage Model
 

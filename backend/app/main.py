@@ -5,12 +5,19 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
 from app.core.config import get_settings
+from app.db.session import SessionLocal
+from app.services.auth_service import ensure_bootstrap_admin
 from app.services.storage_service import ensure_storage_layout
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     ensure_storage_layout()
+    db = SessionLocal()
+    try:
+        ensure_bootstrap_admin(db)
+    finally:
+        db.close()
     yield
 
 

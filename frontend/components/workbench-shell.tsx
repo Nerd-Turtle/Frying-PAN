@@ -2,24 +2,27 @@
 
 import { useEffect, useState } from "react";
 
+import { AdminUserPanel } from "@/components/admin-user-panel";
 import { AuthPanel } from "@/components/auth-panel";
 import { CreateProjectForm } from "@/components/create-project-form";
-import { StatusCard } from "@/components/status-card";
+import { PasswordChangePanel } from "@/components/password-change-panel";
 import { UploadSourceForm } from "@/components/upload-source-form";
 import {
   applyChangeSet,
+  changePassword,
+  createLocalUser,
   createProject,
   exportProject,
-  getHealth,
   getProject,
   getSession,
+  listUsers,
   listProjects,
   loginAccount,
   logoutAccount,
   previewMerge,
-  registerAccount,
   runAnalysis,
   uploadSource,
+  updateLocalUser,
 } from "@/lib/api";
 import type {
   AnalysisFilters,
@@ -27,10 +30,10 @@ import type {
   AuthSession,
   ChangeSetRead,
   ExportRead,
-  HealthResponse,
   NormalizationSuggestion,
   ProjectDetail,
   ProjectSummary,
+  UserRecord,
 } from "@/src/types";
 
 type WorkbenchMessage = {
@@ -48,8 +51,8 @@ const objectTypeOptions = [
 ];
 
 export function WorkbenchShell() {
-  const [health, setHealth] = useState<HealthResponse | null>(null);
   const [session, setSession] = useState<AuthSession | null>(null);
+  const [users, setUsers] = useState<UserRecord[]>([]);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<ProjectDetail | null>(null);
@@ -77,11 +80,11 @@ export function WorkbenchShell() {
   const [message, setMessage] = useState<WorkbenchMessage | null>(null);
 
   useEffect(() => {
-    void refreshWorkbench();
+    void initializeShell();
   }, []);
 
   useEffect(() => {
-    if (!selectedProjectId || !session) {
+    if (!selectedProjectId || !session || session.password_change_required) {
       setSelectedProject(null);
       return;
     }
@@ -89,13 +92,11 @@ export function WorkbenchShell() {
     void loadProject(selectedProjectId);
   }, [selectedProjectId, session]);
 
-  async function refreshWorkbench(preferredProjectId?: string) {
+  async function initializeShell(preferredProjectId?: string) {
     setInitialBusy(true);
 
     try {
-      const healthResponse = await getHealth();
       const currentSession = await getSession();
-      setHealth(healthResponse);
       setSession(currentSession);
 
       if (!currentSession) {
@@ -104,13 +105,7 @@ export function WorkbenchShell() {
         return;
       }
 
-      const projectResponse = await listProjects();
-      setProjects(projectResponse);
-
-      const nextSelectedProjectId =
-        preferredProjectId ?? selectedProjectId ?? projectResponse[0]?.id ?? null;
-
-      setSelectedProjectId(nextSelectedProjectId);
+      await loadAuthenticatedShell(currentSession, preferredProjectId);
       setMessage(null);
     } catch (caught) {
       setMessage({
@@ -123,6 +118,33 @@ export function WorkbenchShell() {
     } finally {
       setInitialBusy(false);
     }
+  }
+
+  async function loadAuthenticatedShell(
+    currentSession: AuthSession,
+    preferredProjectId?: string,
+  ) {
+    if (currentSession.password_change_required) {
+      setProjects([]);
+      setUsers([]);
+      setSelectedProjectId(null);
+      setSelectedProject(null);
+      clearActionState();
+      return;
+    }
+
+    const [projectResponse, userResponse] = await Promise.all([
+      listProjects(),
+      currentSession.user.role === "admin" ? listUsers() : Promise.resolve([]),
+    ]);
+
+    setProjects(projectResponse);
+    setUsers(userResponse);
+
+    const nextSelectedProjectId =
+      preferredProjectId ?? selectedProjectId ?? projectResponse[0]?.id ?? null;
+
+    setSelectedProjectId(nextSelectedProjectId);
   }
 
   async function loadProject(projectId: string) {
@@ -150,52 +172,56 @@ export function WorkbenchShell() {
   }
 
   async function refreshProject(projectId: string) {
-    const [projectResponse, detail] = await Promise.all([listProjects(), getProject(projectId)]);
-    setProjects(projectResponse);
-    setSelectedProject(detail);
+      const [projectResponse, detail, userResponse] = await Promise.all([
+        listProjects(),
+        getProject(projectId),
+        session?.user.role === "admin" ? listUsers() : Promise.resolve([]),
+      ]);
+      setProjects(projectResponse);
+      setUsers(userResponse);
+      setSelectedProject(detail);
   }
 
-  async function handleRegister(payload: {
-    email: string;
-    display_name: string;
-    password: string;
-    organization_name?: string;
-  }) {
-    setAuthBusy(true);
-    try {
-      const currentSession = await registerAccount(payload);
-      setSession(currentSession);
-      await refreshWorkbench();
-      setMessage({
-        tone: "success",
-        text: `Created account for ${currentSession.user.display_name}.`,
-      });
-    } catch (caught) {
-      setMessage({
-        tone: "error",
-        text:
-          caught instanceof Error ? caught.message : "Unknown error while creating the account.",
-      });
-    } finally {
-      setAuthBusy(false);
-    }
-  }
-
-  async function handleLogin(payload: { email: string; password: string }) {
+  async function handleLogin(payload: { username: string; password: string }) {
     setAuthBusy(true);
     try {
       const currentSession = await loginAccount(payload);
       setSession(currentSession);
-      await refreshWorkbench();
+      await loadAuthenticatedShell(currentSession);
       setMessage({
         tone: "success",
-        text: `Signed in as ${currentSession.user.display_name}.`,
+        text: currentSession.password_change_required
+          ? "Temporary password accepted. Set a new password to continue."
+          : `Signed in as ${currentSession.user.display_name}.`,
       });
     } catch (caught) {
       setMessage({
         tone: "error",
         text:
           caught instanceof Error ? caught.message : "Unknown error while signing in.",
+      });
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  async function handleChangePassword(payload: {
+    current_password: string;
+    new_password: string;
+  }) {
+    setAuthBusy(true);
+    try {
+      const currentSession = await changePassword(payload);
+      setSession(currentSession);
+      await loadAuthenticatedShell(currentSession);
+      setMessage({
+        tone: "success",
+        text: "Password updated. The workbench is now unlocked.",
+      });
+    } catch (caught) {
+      setMessage({
+        tone: "error",
+        text: caught instanceof Error ? caught.message : "Unknown error while updating password.",
       });
     } finally {
       setAuthBusy(false);
@@ -210,7 +236,7 @@ export function WorkbenchShell() {
       resetWorkbenchState();
       setMessage({
         tone: "info",
-        text: "Signed out. The workbench is now waiting for a new session.",
+        text: "Signed out.",
       });
     } catch (caught) {
       setMessage({
@@ -230,7 +256,7 @@ export function WorkbenchShell() {
   }) {
     try {
       const created = await createProject(payload);
-      await refreshWorkbench(created.id);
+      await initializeShell(created.id);
       clearActionState();
       setMessage({
         tone: "success",
@@ -270,6 +296,54 @@ export function WorkbenchShell() {
             ? caught.message
             : "Unknown error while uploading the source XML.",
       });
+    }
+  }
+
+  async function handleCreateLocalUser(payload: {
+    username: string;
+    display_name: string;
+    password: string;
+    role: string;
+    must_change_password: boolean;
+  }) {
+    setAuthBusy(true);
+    try {
+      const created = await createLocalUser(payload);
+      setUsers(await listUsers());
+      setMessage({
+        tone: "success",
+        text: `Created local user ${created.username}.`,
+      });
+    } catch (caught) {
+      setMessage({
+        tone: "error",
+        text:
+          caught instanceof Error ? caught.message : "Unknown error while creating the user.",
+      });
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  async function handleToggleUserStatus(user: UserRecord) {
+    setAuthBusy(true);
+    try {
+      await updateLocalUser(user.id, {
+        status: user.status === "active" ? "disabled" : "active",
+      });
+      setUsers(await listUsers());
+      setMessage({
+        tone: "success",
+        text: `${user.username} is now ${user.status === "active" ? "disabled" : "active"}.`,
+      });
+    } catch (caught) {
+      setMessage({
+        tone: "error",
+        text:
+          caught instanceof Error ? caught.message : "Unknown error while updating the user.",
+      });
+    } finally {
+      setAuthBusy(false);
     }
   }
 
@@ -456,6 +530,7 @@ export function WorkbenchShell() {
   }
 
   function resetWorkbenchState() {
+    setUsers([]);
     setProjects([]);
     setSelectedProjectId(null);
     setSelectedProject(null);
@@ -467,119 +542,150 @@ export function WorkbenchShell() {
 
   return (
     <main className="workbench-root">
-      <section className="hero-panel">
-        <div className="hero-brand">
-          <img src="/branding/logo-readme.png" alt="Frying-PAN logo" className="hero-logo" />
-          <div>
-            <div className="hero-kicker">Frontend Workbench</div>
-            <h1 className="hero-title">Project-driven Panorama review, preview, and apply.</h1>
-            <p className="hero-copy">
-              The frontend now exposes real backend workflows for project management, XML upload,
-              analysis review, preview generation, apply, and export. Phase 9 adds session-backed
-              project access without moving Panorama semantics into the browser.
-            </p>
-            {session ? (
-              <div className="session-strip">
-                <div>
-                  Signed in as <strong>{session.user.display_name}</strong> ({session.user.email})
-                </div>
-                <div className="session-strip-meta">
-                  {session.organizations.length} organization
-                  {session.organizations.length === 1 ? "" : "s"} • session until{" "}
-                  {formatTimestamp(session.session_expires_at)}
-                </div>
-                <button type="button" className="secondary-button" onClick={handleLogout}>
-                  Sign out
-                </button>
-              </div>
-            ) : null}
-          </div>
-        </div>
-      </section>
-
-      <section className="status-grid">
-        <StatusCard
-          label="Backend status"
-          value={health?.status ?? (initialBusy ? "loading" : "offline")}
-          tone={health?.status === "ok" ? "success" : "warning"}
-        />
-        <StatusCard label="Projects" value={session ? String(projects.length) : "locked"} />
-        <StatusCard
-          label="Session"
-          value={session ? session.user.display_name : initialBusy ? "loading" : "signed out"}
-          tone={session ? "success" : "warning"}
-        />
-        <StatusCard
-          label="Phase"
-          value="9 in progress"
-          tone={session && (analysis || previewChangeSet || latestExport) ? "success" : "default"}
-        />
-      </section>
-
       {message ? (
         <section className={`message-banner message-${message.tone}`}>{message.text}</section>
       ) : null}
 
       {!session ? (
-        <AuthPanel busy={authBusy || initialBusy} onRegister={handleRegister} onLogin={handleLogin} />
+        <>
+          <section className="hero-panel">
+            <div className="hero-brand">
+              <img src="/branding/logo-readme.png" alt="Frying-PAN logo" className="hero-logo" />
+              <div>
+                <div className="hero-kicker">Login Portal</div>
+                <h1 className="hero-title">Panorama review, merge planning, and export.</h1>
+                <p className="hero-copy">
+                  Sign in with a local account to access the Frying-PAN workbench. Panorama
+                  parsing, dependency analysis, and merge planning remain backend-owned.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <AuthPanel busy={authBusy || initialBusy} onLogin={handleLogin} />
+        </>
+      ) : session.password_change_required ? (
+        <>
+          <section className="hero-panel">
+            <div className="hero-brand">
+              <img src="/branding/logo-readme.png" alt="Frying-PAN logo" className="hero-logo" />
+              <div>
+                <div className="hero-kicker">First Login</div>
+                <h1 className="hero-title">Finish account setup before entering the workbench.</h1>
+                <p className="hero-copy">
+                  This local account is still using a temporary password. Change it now to unlock
+                  projects, uploads, analysis, and export workflows.
+                </p>
+                <div className="session-strip">
+                  <div>
+                    Signed in as <strong>{session.user.display_name}</strong> (@
+                    {session.user.username})
+                  </div>
+                  <button type="button" className="secondary-button" onClick={handleLogout}>
+                    Sign out
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <PasswordChangePanel
+            busy={authBusy || initialBusy}
+            username={session.user.username}
+            onSubmit={handleChangePassword}
+          />
+        </>
       ) : (
-        <section className="workbench-layout">
-          <aside className="sidebar-stack">
-            <section className="workbench-panel">
-              <div className="panel-header">
-                <div>
-                  <div className="panel-kicker">Project Setup</div>
-                  <h2>Create Project</h2>
+        <>
+          <section className="hero-panel">
+            <div className="hero-brand">
+              <img src="/branding/logo-readme.png" alt="Frying-PAN logo" className="hero-logo" />
+              <div>
+                <div className="hero-kicker">Workbench</div>
+                <h1 className="hero-title">Review sources, preview changes, and export safely.</h1>
+                <p className="hero-copy">
+                  The browser stays focused on operator workflow. Panorama semantics, dependency
+                  handling, and merge planning continue to live in the backend.
+                </p>
+                <div className="session-strip">
+                  <div>
+                    Signed in as <strong>{session.user.display_name}</strong> (@
+                    {session.user.username})
+                  </div>
+                  <div className="session-strip-meta">
+                    {session.user.role} • session until {formatTimestamp(session.session_expires_at)}
+                  </div>
+                  <button type="button" className="secondary-button" onClick={handleLogout}>
+                    Sign out
+                  </button>
                 </div>
               </div>
-              <CreateProjectForm
-                organizations={session.organizations}
-                onCreate={handleCreate}
-                disabled={initialBusy}
-              />
-            </section>
+            </div>
+          </section>
 
-            <section className="workbench-panel">
-              <div className="panel-header">
-                <div>
-                  <div className="panel-kicker">Project Browser</div>
-                  <h2>Projects</h2>
-                </div>
-              </div>
-              {projects.length === 0 ? (
-                <div className="empty-state">
-                  No accessible projects yet. Create one inside one of your organizations to start
-                  collecting Panorama XML sources.
-                </div>
-              ) : (
-                <div className="project-list">
-                  {projects.map((project) => (
-                    <button
-                      key={project.id}
-                      type="button"
-                      className={`project-list-item ${
-                        project.id === selectedProjectId ? "project-list-item-active" : ""
-                      }`}
-                      onClick={() => {
-                        setSelectedProjectId(project.id);
-                        clearActionState();
-                      }}
-                    >
-                      <div className="project-list-title">{project.name}</div>
-                      <div className="project-list-meta">
-                        {project.description || "No description yet."}
-                      </div>
-                      <div className="project-list-timestamp">
-                        Updated {formatTimestamp(project.updated_at)}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </section>
-          </aside>
+          {session.user.role === "admin" ? (
+            <AdminUserPanel
+              currentUserId={session.user.id}
+              users={users}
+              busy={authBusy}
+              onCreate={handleCreateLocalUser}
+              onToggleStatus={handleToggleUserStatus}
+            />
+          ) : null}
 
-          <section className="main-stack">
+          <section className="workbench-layout">
+            <aside className="sidebar-stack">
+              <section className="workbench-panel">
+                <div className="panel-header">
+                  <div>
+                    <div className="panel-kicker">Project Setup</div>
+                    <h2>Create Project</h2>
+                  </div>
+                </div>
+                <CreateProjectForm onCreate={handleCreate} disabled={initialBusy} />
+              </section>
+
+              <section className="workbench-panel">
+                <div className="panel-header">
+                  <div>
+                    <div className="panel-kicker">Project Browser</div>
+                    <h2>Projects</h2>
+                  </div>
+                </div>
+                {projects.length === 0 ? (
+                  <div className="empty-state">
+                    No accessible projects yet. Create one to start collecting Panorama XML
+                    sources.
+                  </div>
+                ) : (
+                  <div className="project-list">
+                    {projects.map((project) => (
+                      <button
+                        key={project.id}
+                        type="button"
+                        className={`project-list-item ${
+                          project.id === selectedProjectId ? "project-list-item-active" : ""
+                        }`}
+                        onClick={() => {
+                          setSelectedProjectId(project.id);
+                          clearActionState();
+                        }}
+                      >
+                        <div className="project-list-title">{project.name}</div>
+                        <div className="project-list-meta">
+                          {project.description || "No description yet."}
+                        </div>
+                        <div className="project-list-timestamp">
+                          Updated {formatTimestamp(project.updated_at)}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </aside>
+
+            <section className="main-stack">
             {!selectedProject ? (
               <section className="workbench-panel">
                 <div className="empty-state">
@@ -1146,8 +1252,9 @@ export function WorkbenchShell() {
                 </section>
               </>
             )}
+            </section>
           </section>
-        </section>
+        </>
       )}
     </main>
   );

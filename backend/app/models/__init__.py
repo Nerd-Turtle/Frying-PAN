@@ -1,3 +1,4 @@
+from app.models.app_audit_event import AppAuditEvent
 from app.models.app_session import AppSession
 from app.models.change_set import ChangeSet
 from app.models.config_object import ConfigObject
@@ -16,6 +17,7 @@ from app.models.working_object import WorkingObject
 from app.models.working_reference import WorkingReference
 
 __all__ = [
+    "AppAuditEvent",
     "AppSession",
     "ChangeSet",
     "ConfigObject",

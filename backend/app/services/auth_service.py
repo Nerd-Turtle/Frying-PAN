@@ -15,50 +15,82 @@ from app.models.app_session import AppSession
 from app.models.organization import Organization
 from app.models.user import User
 from app.schemas.auth import SessionRead
-from app.schemas.user import LoginRequest, RegisterRequest
+from app.schemas.user import ChangePasswordRequest, LoginRequest
 from app.services.organization_service import create_organization_for_user, list_user_organizations
 
+BOOTSTRAP_ADMIN_USERNAME = "chef"
+BOOTSTRAP_ADMIN_DISPLAY_NAME = "Chef"
+BOOTSTRAP_ADMIN_ROLE = "admin"
 
-def register_user(db: Session, payload: RegisterRequest) -> User:
-    email = payload.email.strip().lower()
-    user = User(
-        email=email,
-        display_name=payload.display_name.strip(),
-        password_hash=hash_password(payload.password),
-    )
-    db.add(user)
-    try:
+
+def ensure_bootstrap_admin(db: Session) -> None:
+    settings = get_settings()
+    user = db.scalars(
+        select(User).where(User.username == settings.bootstrap_admin_username)
+    ).first()
+    if user is None:
+        user = User(
+            username=settings.bootstrap_admin_username,
+            display_name=settings.bootstrap_admin_display_name,
+            password_hash=hash_password(settings.bootstrap_admin_password),
+            role="admin",
+            status="active",
+            must_change_password=True,
+        )
+        db.add(user)
         db.flush()
-    except IntegrityError as exc:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="An account with that email already exists.",
-        ) from exc
+        create_organization_for_user(
+            db=db,
+            user=user,
+            name=f"{user.display_name} Personal",
+        )
+        db.commit()
+        return
 
-    create_organization_for_user(
-        db=db,
-        user=user,
-        name=(payload.organization_name or f"{user.display_name} Personal").strip(),
-    )
-    db.commit()
-    db.refresh(user)
-    return user
+    changed = False
+    if user.role != "admin":
+        user.role = "admin"
+        changed = True
+    if user.status != "active":
+        user.status = "active"
+        changed = True
+    if changed:
+        db.add(user)
+        db.commit()
 
 
 def authenticate_user(db: Session, payload: LoginRequest) -> User:
-    email = payload.email.strip().lower()
-    user = db.scalars(select(User).where(User.email == email)).first()
+    username = payload.username.strip().lower()
+    user = db.scalars(select(User).where(User.username == username)).first()
     if user is None or not verify_password(payload.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password.",
+            detail="Invalid username or password.",
         )
     if user.status != "active":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="This account is not active.",
         )
+    return user
+
+
+def change_password(
+    db: Session,
+    user: User,
+    payload: ChangePasswordRequest,
+) -> User:
+    if not verify_password(payload.current_password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect.",
+        )
+    user.password_hash = hash_password(payload.new_password)
+    user.must_change_password = False
+    user.updated_at = datetime.now(timezone.utc)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
     return user
 
 
@@ -131,6 +163,7 @@ def build_session_read(db: Session, user: User, session: AppSession) -> SessionR
         user=user,
         organizations=organizations,
         session_expires_at=_coerce_utc(session.expires_at),
+        password_change_required=user.must_change_password,
     )
 
 
@@ -179,6 +212,71 @@ def verify_password(password: str, encoded_hash: str) -> bool:
         p=int(p_text),
     )
     return secrets.compare_digest(actual, expected)
+
+
+def normalize_optional_email(db: Session, email: str | None, user_id: str | None = None) -> str | None:
+    if email is None:
+        return None
+
+    normalized = email.strip().lower()
+    if not normalized:
+        return None
+
+    statement = select(User).where(User.email == normalized)
+    existing = db.scalars(statement).first()
+    if existing is not None and existing.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with that email already exists.",
+        )
+    return normalized
+
+
+def normalize_username(db: Session, username: str, user_id: str | None = None) -> str:
+    normalized = username.strip().lower()
+    if not normalized:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Username is required.",
+        )
+    existing = db.scalars(select(User).where(User.username == normalized)).first()
+    if existing is not None and existing.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with that username already exists.",
+        )
+    return normalized
+
+
+def validate_user_role(role: str) -> str:
+    normalized = role.strip().lower()
+    if normalized not in {"admin", "operator"}:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Role must be either 'admin' or 'operator'.",
+        )
+    return normalized
+
+
+def validate_user_status(status_text: str) -> str:
+    normalized = status_text.strip().lower()
+    if normalized not in {"active", "disabled"}:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Status must be either 'active' or 'disabled'.",
+        )
+    return normalized
+
+
+def flush_user_or_raise(db: Session) -> None:
+    try:
+        db.flush()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="User record conflicts with an existing account.",
+        ) from exc
 
 
 def _hash_token(raw_token: str) -> str:

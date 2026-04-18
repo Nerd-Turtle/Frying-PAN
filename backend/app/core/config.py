@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000"
     session_cookie_name: str = "frying_pan_session"
     session_ttl_hours: int = 24 * 7
+    bootstrap_admin_username: str = "chef"
+    bootstrap_admin_password: str = "chefchef"
+    bootstrap_admin_display_name: str = "Chef"
 
     @property
     def cors_origin_list(self) -> list[str]:

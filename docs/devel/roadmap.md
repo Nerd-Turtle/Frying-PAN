@@ -767,7 +767,141 @@ Suggested validation/tests:
 
 - audit trail tests for user-attributed actions
 
-## Phase 10: Hardening And Scale Validation
+## Phase 10: WebUI Refactor
+
+Goal:
+
+- simplify the operator-facing entry flow so authentication, admin access, and the workbench appear in the right places
+
+Status:
+
+- `in_progress`
+
+Tasks:
+
+### 10.1 Refactor the landing page into a login-only portal
+
+Status:
+
+- `pass`
+
+Work:
+
+- remove pre-auth cards or labels that expose backend state, project state, session state, or roadmap phase status
+- make the landing page primarily about authentication
+- keep backend/auth failures visible as inline, operator-friendly errors
+
+PASS validation:
+
+- unauthenticated users see a clean login portal rather than a partial workbench
+- no pre-auth UI depends on project state or roadmap state to make sense
+- backend unavailability or auth failure is communicated clearly from the login experience
+
+Suggested validation/tests:
+
+- frontend integration tests for unauthenticated routing
+- manual browser validation of the unauthenticated landing page
+
+### 10.2 Replace public registration with local username-based authentication
+
+Status:
+
+- `pass`
+
+Work:
+
+- remove public self-registration from the initial landing page
+- switch login UX and backend auth flow to local username/password
+- preserve session-cookie auth after successful login
+
+PASS validation:
+
+- users authenticate with local usernames instead of email-first registration
+- no public self-registration path remains on the landing page
+- authenticated sessions still protect the workbench correctly
+
+Suggested validation/tests:
+
+- backend auth integration tests for username login
+- frontend integration tests for login success and failure handling
+
+### 10.3 Seed a bootstrap administrator and first-login password change flow
+
+Status:
+
+- `pass`
+
+Work:
+
+- seed a default bootstrap admin account named `chef`
+- require password setup/change on first login for the bootstrap account
+- avoid blank-password bootstrap behavior
+
+PASS validation:
+
+- a fresh deployment contains the expected bootstrap admin account
+- the bootstrap admin cannot continue using the temporary password indefinitely
+- first-login password change flow is enforced and testable
+
+Suggested validation/tests:
+
+- migration or startup seeding test
+- backend tests for first-login password-change enforcement
+- manual login validation on a fresh environment
+
+### 10.4 Add an admin-only local user management path
+
+Status:
+
+- `pass`
+
+Work:
+
+- provide an admin-only UI and backend path for creating and managing local users
+- keep local user administration separate from Panorama project semantics
+- restrict admin controls to administrator accounts only
+
+PASS validation:
+
+- admins can create and manage local users
+- non-admin users cannot access admin-only routes or screens
+- user-management actions are auditable
+
+Suggested validation/tests:
+
+- authorization tests for admin-only routes
+- UI validation for admin vs non-admin navigation visibility
+- audit/event tests for user-management actions
+
+### 10.5 Restore the workbench as the post-login application surface
+
+Status:
+
+- `pass`
+
+Work:
+
+- show the real workbench after successful authentication
+- remove roadmap/phase language from the product UI
+- ensure authenticated users land in the actual project workflow area
+
+PASS validation:
+
+- authenticated users land in the workbench, not a marketing or scaffold screen
+- project and workflow UI appears only when it is actually actionable
+- product UI language reflects operator tasks rather than implementation-phase tracking
+
+Suggested validation/tests:
+
+- authenticated routing tests
+- manual end-to-end browser validation after login
+
+Notes:
+
+- this phase must remain open until the user explicitly confirms the WebUI refactor is acceptable
+- tasks may be added, revised, or re-opened during design discussion and implementation
+
+## Phase 11: Hardening And Scale Validation
 
 Goal:
 
@@ -779,7 +913,7 @@ Status:
 
 Tasks:
 
-### 10.1 Performance and indexing review
+### 11.1 Performance and indexing review
 
 Work:
 
@@ -798,7 +932,7 @@ Suggested validation/tests:
 - analysis timing benchmarks
 - query plan review for critical filters and lookups
 
-### 10.2 Larger fixture and regression suite
+### 11.2 Larger fixture and regression suite
 
 Work:
 
@@ -815,7 +949,7 @@ Suggested validation/tests:
 - expanded automated test suite
 - fixture-driven regression runs in CI
 
-### 10.3 Deployment and operational validation
+### 11.3 Deployment and operational validation
 
 Work:
 

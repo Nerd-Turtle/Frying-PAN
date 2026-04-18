@@ -1,4 +1,5 @@
 import type {
+  AdminUserCreate,
   AnalysisFilters,
   AnalysisRunResponse,
   AuthSession,
@@ -61,23 +62,21 @@ export function getSession(): Promise<AuthSession | null> {
   return requestOptional<AuthSession>("/api/auth/session");
 }
 
-export function registerAccount(payload: {
-  email: string;
-  display_name: string;
+export function loginAccount(payload: {
+  username: string;
   password: string;
-  organization_name?: string;
 }): Promise<AuthSession> {
-  return request<AuthSession>("/api/auth/register", {
+  return request<AuthSession>("/api/auth/login", {
     method: "POST",
     body: JSON.stringify(payload),
   });
 }
 
-export function loginAccount(payload: {
-  email: string;
-  password: string;
+export function changePassword(payload: {
+  current_password: string;
+  new_password: string;
 }): Promise<AuthSession> {
-  return request<AuthSession>("/api/auth/login", {
+  return request<AuthSession>("/api/auth/change-password", {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -168,5 +167,33 @@ export function exportProject(
   return request<ExportRead>(`/api/projects/${projectId}/exports`, {
     method: "POST",
     body: JSON.stringify(payload ?? {}),
+  });
+}
+
+export function listUsers(): Promise<Array<AuthSession["user"]>> {
+  return request<Array<AuthSession["user"]>>("/api/admin/users");
+}
+
+export function createLocalUser(payload: AdminUserCreate): Promise<AuthSession["user"]> {
+  return request<AuthSession["user"]>("/api/admin/users", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateLocalUser(
+  userId: string,
+  payload: {
+    display_name?: string;
+    email?: string;
+    role?: string;
+    status?: string;
+    reset_password?: string;
+    must_change_password?: boolean;
+  },
+): Promise<AuthSession["user"]> {
+  return request<AuthSession["user"]>(`/api/admin/users/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
   });
 }
