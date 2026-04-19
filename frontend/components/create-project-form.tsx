@@ -36,10 +36,7 @@ export function CreateProjectForm({ onCreate, disabled = false }: CreateProjectF
       style={{
         display: "grid",
         gap: 12,
-        padding: 18,
-        background: "var(--panel)",
-        border: "1px solid var(--line)",
-        borderRadius: 18,
+        padding: 0,
       }}
     >
       <div>
@@ -81,7 +78,7 @@ export function CreateProjectForm({ onCreate, disabled = false }: CreateProjectF
 const inputStyle: CSSProperties = {
   width: "100%",
   marginTop: 8,
-  borderRadius: 12,
+  borderRadius: 0,
   border: "1px solid var(--line)",
   padding: "12px 14px",
   background: "var(--panel-strong)",

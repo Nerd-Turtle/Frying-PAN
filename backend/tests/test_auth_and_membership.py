@@ -106,6 +106,36 @@ def test_password_change_is_required_before_workbench_access() -> None:
         assert allowed_project_response.status_code == 200
 
 
+def test_user_can_update_own_profile_details() -> None:
+    username = f"profile-{uuid4().hex[:8]}"
+
+    with _client() as admin_client:
+        create_local_user(
+            admin_client,
+            username=username,
+            display_name="Original Name",
+            password="Passw0rd!123",
+            must_change_password=False,
+        )
+
+    with _client() as user_client:
+        login_response = user_client.post(
+            "/api/auth/login",
+            json={"username": username, "password": "Passw0rd!123"},
+        )
+        assert login_response.status_code == 200
+
+        profile_response = user_client.patch(
+            "/api/auth/profile",
+            json={"display_name": "Updated Name", "email": "updated@example.com"},
+        )
+        assert profile_response.status_code == 200
+        updated = profile_response.json()
+        assert updated["username"] == username
+        assert updated["display_name"] == "Updated Name"
+        assert updated["email"] == "updated@example.com"
+
+
 def test_project_access_is_restricted_by_membership() -> None:
     owner_username = f"owner-{uuid4().hex[:8]}"
     other_username = f"other-{uuid4().hex[:8]}"

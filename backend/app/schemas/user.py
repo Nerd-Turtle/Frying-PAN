@@ -27,6 +27,11 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(min_length=8, max_length=200)
 
 
+class ProfileUpdateRequest(BaseModel):
+    display_name: str | None = Field(default=None, min_length=1, max_length=200)
+    email: EmailStr | None = None
+
+
 class AdminUserCreateRequest(BaseModel):
     username: str = Field(min_length=1, max_length=64)
     display_name: str = Field(min_length=1, max_length=200)

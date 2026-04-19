@@ -3,6 +3,7 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 
+import { formatUserRole } from "@/lib/labels";
 import type { UserRecord } from "@/src/types";
 
 type AdminUserPanelProps = {
@@ -101,7 +102,7 @@ export function AdminUserPanel({
             Role
             <select value={role} onChange={(event) => setRole(event.target.value)} disabled={busy}>
               <option value="operator">Operator</option>
-              <option value="admin">Admin</option>
+              <option value="admin">Administrator</option>
             </select>
           </label>
           <label className="field-stack checkbox-row">
@@ -127,10 +128,10 @@ export function AdminUserPanel({
               {users.map((user) => (
                 <article key={user.id} className="event-row">
                   <div className="event-name">
-                    {user.display_name} <span className="muted-tag">@{user.username}</span>
+                    {user.display_name} <span className="muted-tag">{user.username}</span>
                   </div>
                   <div className="event-meta">
-                    {user.role} • {user.status}
+                    {formatUserRole(user.role)} • {user.status}
                     {user.must_change_password ? " • password change required" : ""}
                   </div>
                   <div className="button-row">

@@ -30,6 +30,11 @@ export type AuthSession = {
   password_change_required: boolean;
 };
 
+export type ProfileUpdate = {
+  display_name?: string;
+  email?: string;
+};
+
 export type AdminUserCreate = {
   username: string;
   display_name: string;

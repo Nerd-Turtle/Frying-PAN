@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_session
 from app.db.session import get_db
 from app.schemas.auth import SessionRead
-from app.schemas.user import ChangePasswordRequest, LoginRequest
+from app.schemas.user import ChangePasswordRequest, LoginRequest, ProfileUpdateRequest, UserRead
 from app.services.auth_service import (
     attach_session_cookie,
     authenticate_user,
@@ -12,6 +12,7 @@ from app.services.auth_service import (
     change_password,
     clear_session_cookie,
     create_user_session,
+    update_current_user_profile,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -39,6 +40,16 @@ def change_password_endpoint(
     updated = change_password(db=db, user=user, payload=payload)
     db.refresh(session)
     return build_session_read(db=db, user=updated, session=session)
+
+
+@router.patch("/profile", response_model=UserRead)
+def update_profile_endpoint(
+    payload: ProfileUpdateRequest,
+    authenticated: tuple = Depends(get_current_session),
+    db: Session = Depends(get_db),
+) -> UserRead:
+    user, _ = authenticated
+    return update_current_user_profile(db=db, user=user, payload=payload)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)

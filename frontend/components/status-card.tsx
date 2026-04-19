@@ -19,11 +19,8 @@ export function StatusCard({
   return (
     <article
       style={{
-        background: "var(--panel)",
-        border: `1px solid ${accent}`,
-        borderRadius: 18,
-        padding: 18,
-        boxShadow: "var(--shadow)",
+        borderBottom: `1px solid ${accent}`,
+        padding: "10px 0 14px",
       }}
     >
       <div style={{ color: "var(--muted)", fontSize: 13, textTransform: "uppercase" }}>

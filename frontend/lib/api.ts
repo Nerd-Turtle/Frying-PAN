@@ -6,22 +6,30 @@ import type {
   ChangeSetRead,
   ExportRead,
   HealthResponse,
+  ProfileUpdate,
   ProjectDetail,
   ProjectSummary,
 } from "@/src/types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    credentials: "include",
-    headers: {
-      ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
-      ...init?.headers,
-    },
-    cache: "no-store",
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      credentials: "include",
+      headers: {
+        ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+        ...init?.headers,
+      },
+      cache: "no-store",
+    });
+  } catch (error) {
+    throw new Error(
+      "Unable to reach the Frying-PAN API from this browser. Check that the backend is running and reachable.",
+    );
+  }
 
   if (!response.ok) {
     const detail = await response.text();
@@ -32,15 +40,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 async function requestOptional<T>(path: string, init?: RequestInit): Promise<T | null> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    credentials: "include",
-    headers: {
-      ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
-      ...init?.headers,
-    },
-    cache: "no-store",
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      credentials: "include",
+      headers: {
+        ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+        ...init?.headers,
+      },
+      cache: "no-store",
+    });
+  } catch (error) {
+    throw new Error(
+      "Unable to reach the Frying-PAN API from this browser. Check that the backend is running and reachable.",
+    );
+  }
 
   if (response.status === 401) {
     return null;
@@ -78,6 +93,13 @@ export function changePassword(payload: {
 }): Promise<AuthSession> {
   return request<AuthSession>("/api/auth/change-password", {
     method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateProfile(payload: ProfileUpdate): Promise<AuthSession["user"]> {
+  return request<AuthSession["user"]>("/api/auth/profile", {
+    method: "PATCH",
     body: JSON.stringify(payload),
   });
 }

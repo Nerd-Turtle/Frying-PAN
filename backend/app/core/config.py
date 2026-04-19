@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     session_cookie_name: str = "frying_pan_session"
     session_ttl_hours: int = 24 * 7
     bootstrap_admin_username: str = "chef"
-    bootstrap_admin_password: str = "chefchef"
+    bootstrap_admin_password: str = "overeasy"
     bootstrap_admin_display_name: str = "Chef"
 
     @property

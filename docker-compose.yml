@@ -36,10 +36,10 @@ services:
   frontend:
     build:
       context: ./frontend
-    command: npm run dev -- --hostname 0.0.0.0 --port 3000
+    command: sh -c "rm -rf .next && npm run dev -- --hostname 0.0.0.0 --port 3000"
     working_dir: /app/frontend
     environment:
-      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+      FRYING_PAN_API_PROXY_TARGET: ${FRYING_PAN_API_PROXY_TARGET:-http://backend:8000}
     volumes:
       - ./frontend:/app/frontend
       - /app/frontend/node_modules

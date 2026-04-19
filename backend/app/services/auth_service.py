@@ -15,7 +15,7 @@ from app.models.app_session import AppSession
 from app.models.organization import Organization
 from app.models.user import User
 from app.schemas.auth import SessionRead
-from app.schemas.user import ChangePasswordRequest, LoginRequest
+from app.schemas.user import ChangePasswordRequest, LoginRequest, ProfileUpdateRequest
 from app.services.organization_service import create_organization_for_user, list_user_organizations
 
 BOOTSTRAP_ADMIN_USERNAME = "chef"
@@ -54,6 +54,12 @@ def ensure_bootstrap_admin(db: Session) -> None:
     if user.status != "active":
         user.status = "active"
         changed = True
+    if user.must_change_password and not verify_password(
+        settings.bootstrap_admin_password,
+        user.password_hash,
+    ):
+        user.password_hash = hash_password(settings.bootstrap_admin_password)
+        changed = True
     if changed:
         db.add(user)
         db.commit()
@@ -89,6 +95,23 @@ def change_password(
     user.must_change_password = False
     user.updated_at = datetime.now(timezone.utc)
     db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def update_current_user_profile(
+    db: Session,
+    user: User,
+    payload: ProfileUpdateRequest,
+) -> User:
+    if payload.display_name is not None:
+        user.display_name = payload.display_name.strip()
+    if payload.email is not None:
+        user.email = normalize_optional_email(db=db, email=payload.email, user_id=user.id)
+    user.updated_at = datetime.now(timezone.utc)
+    db.add(user)
+    flush_user_or_raise(db)
     db.commit()
     db.refresh(user)
     return user

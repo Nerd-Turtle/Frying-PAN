@@ -6,7 +6,9 @@ import { AdminUserPanel } from "@/components/admin-user-panel";
 import { AuthPanel } from "@/components/auth-panel";
 import { CreateProjectForm } from "@/components/create-project-form";
 import { PasswordChangePanel } from "@/components/password-change-panel";
+import { ProfilePanel } from "@/components/profile-panel";
 import { UploadSourceForm } from "@/components/upload-source-form";
+import { formatUserRole } from "@/lib/labels";
 import {
   applyChangeSet,
   changePassword,
@@ -22,6 +24,7 @@ import {
   previewMerge,
   runAnalysis,
   uploadSource,
+  updateProfile,
   updateLocalUser,
 } from "@/lib/api";
 import type {
@@ -40,6 +43,16 @@ type WorkbenchMessage = {
   tone: "info" | "success" | "error";
   text: string;
 };
+
+type ConsoleView =
+  | "overview"
+  | "projects"
+  | "sources"
+  | "analysis"
+  | "changes"
+  | "exports"
+  | "profile"
+  | "administration";
 
 const objectTypeOptions = [
   { value: "", label: "All supported types" },
@@ -70,6 +83,8 @@ export function WorkbenchShell() {
   const [previewDescription, setPreviewDescription] = useState(
     "Backend-generated preview of selected promotions and normalization updates.",
   );
+  const [activeView, setActiveView] = useState<ConsoleView>("overview");
+  const [menuQuery, setMenuQuery] = useState("");
   const [initialBusy, setInitialBusy] = useState(true);
   const [authBusy, setAuthBusy] = useState(false);
   const [projectBusy, setProjectBusy] = useState(false);
@@ -91,6 +106,12 @@ export function WorkbenchShell() {
 
     void loadProject(selectedProjectId);
   }, [selectedProjectId, session]);
+
+  useEffect(() => {
+    if (session?.user.role !== "admin" && activeView === "administration") {
+      setActiveView("overview");
+    }
+  }, [activeView, session]);
 
   async function initializeShell(preferredProjectId?: string) {
     setInitialBusy(true);
@@ -192,7 +213,7 @@ export function WorkbenchShell() {
         tone: "success",
         text: currentSession.password_change_required
           ? "Temporary password accepted. Set a new password to continue."
-          : `Signed in as ${currentSession.user.display_name}.`,
+          : `Signed in as ${currentSession.user.username}.`,
       });
     } catch (caught) {
       setMessage({
@@ -222,6 +243,29 @@ export function WorkbenchShell() {
       setMessage({
         tone: "error",
         text: caught instanceof Error ? caught.message : "Unknown error while updating password.",
+      });
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  async function handleUpdateProfile(payload: { display_name?: string; email?: string }) {
+    setAuthBusy(true);
+    try {
+      const updatedUser = await updateProfile(payload);
+      setSession((current) => (current ? { ...current, user: updatedUser } : current));
+      if (session?.user.role === "admin") {
+        setUsers(await listUsers());
+      }
+      setMessage({
+        tone: "success",
+        text: "Profile updated.",
+      });
+    } catch (caught) {
+      setMessage({
+        tone: "error",
+        text:
+          caught instanceof Error ? caught.message : "Unknown error while updating the profile.",
       });
     } finally {
       setAuthBusy(false);
@@ -540,6 +584,950 @@ export function WorkbenchShell() {
   const selectedAppliedChangeSet =
     previewChangeSet?.status === "applied" ? previewChangeSet.id : undefined;
 
+  const navItems = [
+    {
+      view: "overview" as const,
+      label: "Overview",
+      helper: "Project and workflow status",
+    },
+    {
+      view: "projects" as const,
+      label: "Projects",
+      helper: "Create and select workspaces",
+    },
+    {
+      view: "sources" as const,
+      label: "Sources",
+      helper: "Upload XML and inspect imports",
+    },
+    {
+      view: "analysis" as const,
+      label: "Analysis",
+      helper: "Duplicates, normalization, promotion",
+    },
+    {
+      view: "changes" as const,
+      label: "Change Plan",
+      helper: "Preview and apply staged updates",
+    },
+    {
+      view: "exports" as const,
+      label: "Exports",
+      helper: "Generate XML output artifacts",
+    },
+    ...(session?.user.role === "admin"
+      ? [
+          {
+            view: "administration" as const,
+            label: "Administration",
+            helper: "Local users and access",
+          },
+        ]
+      : []),
+  ];
+
+  const filteredNavItems = navItems.filter((item) => {
+    if (!menuQuery.trim()) {
+      return true;
+    }
+
+    const query = menuQuery.trim().toLowerCase();
+    return (
+      item.label.toLowerCase().includes(query) || item.helper.toLowerCase().includes(query)
+    );
+  });
+
+  const profileNavItem = {
+    view: "profile" as const,
+    label: "Profile",
+    helper: "Manage your account settings",
+  };
+
+  const activeNavItem =
+    navItems.find((item) => item.view === activeView) ??
+    (activeView === "profile" ? profileNavItem : null) ??
+    navItems[0] ??
+    null;
+
+  function renderProjectContextCard() {
+    if (!selectedProject) {
+      return (
+        <section className="workbench-panel">
+          <div className="empty-state">
+            {projectBusy
+              ? "Loading selected project..."
+              : "Select a project to inspect sources, run analysis, and drive the merge workflow."}
+          </div>
+        </section>
+      );
+    }
+
+    return (
+      <section className="workbench-panel">
+        <div className="panel-header">
+          <div>
+            <div className="panel-kicker">Selected Project</div>
+            <h2>{selectedProject.name}</h2>
+            <p className="panel-copy">
+              {selectedProject.description ||
+                "No project description yet. Use this space to keep migration intent visible."}
+            </p>
+          </div>
+        </div>
+
+        <div className="detail-grid">
+          <div className="detail-card">
+            <span className="detail-label">Status</span>
+            <strong>{selectedProject.status}</strong>
+          </div>
+          <div className="detail-card">
+            <span className="detail-label">Sources</span>
+            <strong>{selectedProject.sources.length}</strong>
+          </div>
+          <div className="detail-card">
+            <span className="detail-label">Events</span>
+            <strong>{selectedProject.events.length}</strong>
+          </div>
+          <div className="detail-card">
+            <span className="detail-label">Updated</span>
+            <strong>{formatTimestamp(selectedProject.updated_at)}</strong>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  function renderProjectBrowser() {
+    return (
+      <section className="workbench-panel">
+        <div className="panel-header">
+          <div>
+            <div className="panel-kicker">Project Browser</div>
+            <h2>Projects</h2>
+            <p className="panel-copy">
+              Select the project that should drive source intake, analysis, change planning, and
+              export.
+            </p>
+          </div>
+        </div>
+
+        {projects.length === 0 ? (
+          <div className="empty-state">
+            No accessible projects yet. Create one to start collecting Panorama XML sources.
+          </div>
+        ) : (
+          <div className="project-list">
+            {projects.map((project) => (
+              <button
+                key={project.id}
+                type="button"
+                className={`project-list-item ${
+                  project.id === selectedProjectId ? "project-list-item-active" : ""
+                }`}
+                onClick={() => {
+                  setSelectedProjectId(project.id);
+                  clearActionState();
+                }}
+              >
+                <div className="project-list-title">{project.name}</div>
+                <div className="project-list-meta">
+                  {project.description || "No description yet."}
+                </div>
+                <div className="project-list-timestamp">
+                  Updated {formatTimestamp(project.updated_at)}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  function renderRecentEvents(limit = 8) {
+    if (!selectedProject) {
+      return (
+        <section className="workbench-panel">
+          <div className="empty-state">Select a project to see its audit trail.</div>
+        </section>
+      );
+    }
+
+    return (
+      <section className="workbench-panel">
+        <div className="panel-header">
+          <div>
+            <div className="panel-kicker">Audit</div>
+            <h2>Recent Events</h2>
+          </div>
+        </div>
+        {selectedProject.events.length === 0 ? (
+          <div className="empty-state">No project events recorded yet.</div>
+        ) : (
+          <div className="event-list">
+            {selectedProject.events.slice(0, limit).map((event) => (
+              <div key={event.id} className="event-row">
+                <div className="event-name">{event.event_type}</div>
+                <div className="event-meta">
+                  {formatTimestamp(event.created_at)}
+                  {event.actor_user_id ? ` • actor ${shortId(event.actor_user_id)}` : ""}
+                </div>
+                {event.payload ? <div className="event-payload">{event.payload}</div> : null}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  function renderSourcesInventory() {
+    if (!selectedProject) {
+      return (
+        <section className="workbench-panel">
+          <div className="empty-state">Select a project to inspect imported sources.</div>
+        </section>
+      );
+    }
+
+    return (
+      <section className="workbench-panel">
+        <div className="panel-header">
+          <div>
+            <div className="panel-kicker">Source Inventory</div>
+            <h2>Imported Sources</h2>
+            <p className="panel-copy">
+              Raw XML remains backend-owned and stored on disk. The browser only reflects indexed
+              source metadata and canonical inventory state.
+            </p>
+          </div>
+        </div>
+
+        {selectedProject.sources.length === 0 ? (
+          <div className="empty-state">No sources uploaded yet.</div>
+        ) : (
+          <div className="source-grid">
+            {selectedProject.sources.map((source) => (
+              <article key={source.id} className="source-card">
+                <div className="source-title">{source.label}</div>
+                <div className="source-meta">
+                  {source.filename} • {source.source_type} • {source.parse_status}
+                </div>
+                <div className="source-meta">
+                  Imported {formatTimestamp(source.imported_at)}
+                  {source.imported_by_user_id ? ` • actor ${shortId(source.imported_by_user_id)}` : ""}
+                </div>
+                <div className="source-path">{shortSha(source.file_sha256)}</div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  function renderAnalysisPanel() {
+    if (!selectedProject) {
+      return (
+        <section className="workbench-panel">
+          <div className="empty-state">Select a project before running analysis.</div>
+        </section>
+      );
+    }
+
+    return (
+      <section className="workbench-panel">
+        <div className="panel-header">
+          <div>
+            <div className="panel-kicker">Analysis</div>
+            <h2>Duplicate, normalization, and promotion review</h2>
+            <p className="panel-copy">
+              Filters only scope the backend report. They do not re-implement any config logic in
+              the browser.
+            </p>
+          </div>
+        </div>
+
+        <div className="filter-grid">
+          <label className="field-stack">
+            <span>Source filter</span>
+            <select
+              value={analysisFilters.source_id}
+              onChange={(event) =>
+                setAnalysisFilters((current) => ({
+                  ...current,
+                  source_id: event.target.value,
+                }))
+              }
+            >
+              <option value="">All imported sources</option>
+              {selectedProject.sources.map((source) => (
+                <option key={source.id} value={source.id}>
+                  {source.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="field-stack">
+            <span>Object type</span>
+            <select
+              value={analysisFilters.object_type}
+              onChange={(event) =>
+                setAnalysisFilters((current) => ({
+                  ...current,
+                  object_type: event.target.value,
+                }))
+              }
+            >
+              {objectTypeOptions.map((option) => (
+                <option key={option.value || "all"} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="field-stack">
+            <span>Scope path</span>
+            <input
+              value={analysisFilters.scope_path}
+              onChange={(event) =>
+                setAnalysisFilters((current) => ({
+                  ...current,
+                  scope_path: event.target.value,
+                }))
+              }
+              placeholder="shared/device-group:Device-Group-1"
+            />
+          </label>
+
+          <div className="filter-actions">
+            <button
+              type="button"
+              className="action-button"
+              onClick={handleRunAnalysis}
+              disabled={analysisBusy || projectBusy}
+            >
+              {analysisBusy ? "Running analysis..." : "Run analysis"}
+            </button>
+          </div>
+        </div>
+
+        {!analysis ? (
+          <div className="empty-state">
+            Run analysis to populate duplicate findings, normalization suggestions, and promotion
+            assessments for this project.
+          </div>
+        ) : (
+          <div className="result-stack">
+            <div className="summary-grid">
+              <div className="summary-card">
+                <span>Duplicate names</span>
+                <strong>{analysis.report.duplicate_name_findings.length}</strong>
+              </div>
+              <div className="summary-card">
+                <span>Duplicate values</span>
+                <strong>{analysis.report.duplicate_value_findings.length}</strong>
+              </div>
+              <div className="summary-card">
+                <span>Normalization suggestions</span>
+                <strong>{analysis.report.normalization_suggestions.length}</strong>
+              </div>
+              <div className="summary-card">
+                <span>Promotion blockers</span>
+                <strong>{analysis.report.promotion_blockers.length}</strong>
+              </div>
+            </div>
+
+            <div className="three-column-grid">
+              <section className="result-panel">
+                <h3>Duplicate names</h3>
+                {analysis.report.duplicate_name_findings.length === 0 ? (
+                  <p className="empty-inline">No duplicate-name findings for this filter set.</p>
+                ) : (
+                  analysis.report.duplicate_name_findings.map((finding) => (
+                    <article
+                      key={`${finding.object_type}-${finding.key}`}
+                      className="finding-card"
+                    >
+                      <div className="finding-title">
+                        {finding.object_type} • {finding.key}
+                      </div>
+                      <ul className="compact-list">
+                        {finding.items.map((item) => (
+                          <li key={item.id}>
+                            <strong>{item.object_name}</strong>
+                            <span>{item.scope_path}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </article>
+                  ))
+                )}
+              </section>
+
+              <section className="result-panel">
+                <h3>Duplicate values</h3>
+                {analysis.report.duplicate_value_findings.length === 0 ? (
+                  <p className="empty-inline">No duplicate-value findings for this filter set.</p>
+                ) : (
+                  analysis.report.duplicate_value_findings.map((finding, index) => (
+                    <article
+                      key={`${finding.object_type}-${finding.key}-${index}`}
+                      className="finding-card"
+                    >
+                      <div className="finding-title">
+                        {finding.object_type} • {truncateMiddle(finding.key, 42)}
+                      </div>
+                      <div className="code-pill">
+                        {renderPayloadSummary(finding.normalized_payload)}
+                      </div>
+                      <ul className="compact-list">
+                        {finding.items.map((item) => (
+                          <li key={item.id}>
+                            <strong>{item.object_name}</strong>
+                            <span>{item.scope_path}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </article>
+                  ))
+                )}
+              </section>
+
+              <section className="result-panel">
+                <h3>Normalization suggestions</h3>
+                {analysis.report.normalization_suggestions.length === 0 ? (
+                  <p className="empty-inline">No normalization suggestions right now.</p>
+                ) : (
+                  analysis.report.normalization_suggestions.map((suggestion) => {
+                    const key = `${suggestion.object_id}::${suggestion.kind}`;
+                    return (
+                      <label key={key} className="selectable-card">
+                        <input
+                          type="checkbox"
+                          checked={selectedNormalizationKeys.includes(key)}
+                          onChange={() => toggleNormalizationSelection(suggestion)}
+                        />
+                        <div>
+                          <div className="finding-title">{suggestion.object_name}</div>
+                          <div className="selectable-meta">{suggestion.scope_path}</div>
+                          <div className="code-pill">
+                            {suggestion.original_value} → {suggestion.suggested_value}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })
+                )}
+              </section>
+            </div>
+
+            <div className="two-column-grid">
+              <section className="result-panel">
+                <h3>Promotion candidates</h3>
+                {analysis.report.promotion_candidates.length === 0 ? (
+                  <p className="empty-inline">No promotable candidates in the current report.</p>
+                ) : (
+                  analysis.report.promotion_candidates.map((candidate) => (
+                    <label key={candidate.object_id} className="selectable-card">
+                      <input
+                        type="checkbox"
+                        checked={selectedObjectIds.includes(candidate.object_id)}
+                        onChange={() => toggleObjectSelection(candidate.object_id)}
+                      />
+                      <div>
+                        <div className="finding-title">
+                          {candidate.object_name}{" "}
+                          <span className="muted-tag">{candidate.object_type}</span>
+                        </div>
+                        <div className="selectable-meta">{candidate.scope_path}</div>
+                        {candidate.dependency_targets.length > 0 ? (
+                          <div className="selectable-meta">
+                            Dependencies: {candidate.dependency_targets.join(", ")}
+                          </div>
+                        ) : null}
+                      </div>
+                    </label>
+                  ))
+                )}
+              </section>
+
+              <section className="result-panel">
+                <h3>Promotion blockers</h3>
+                {analysis.report.promotion_blockers.length === 0 ? (
+                  <p className="empty-inline">No blockers reported in the current report.</p>
+                ) : (
+                  analysis.report.promotion_blockers.map((blocker) => (
+                    <article key={blocker.object_id} className="finding-card blocked-card">
+                      <div className="finding-title">
+                        {blocker.object_name}{" "}
+                        <span className="muted-tag">{blocker.object_type}</span>
+                      </div>
+                      <div className="selectable-meta">{blocker.scope_path}</div>
+                      <div className="pill-row">
+                        {blocker.blockers.map((item) => (
+                          <span key={item} className="warning-pill">
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                    </article>
+                  ))
+                )}
+              </section>
+            </div>
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  function renderChangePlanPanel() {
+    if (!selectedProject) {
+      return (
+        <section className="workbench-panel">
+          <div className="empty-state">Select a project before creating a change preview.</div>
+        </section>
+      );
+    }
+
+    return (
+      <section className="workbench-panel">
+        <div className="panel-header">
+          <div>
+            <div className="panel-kicker">Change Preview</div>
+            <h2>Preview and apply</h2>
+            <p className="panel-copy">
+              Selected candidates and normalization suggestions are sent directly to the backend
+              preview planner.
+            </p>
+          </div>
+        </div>
+
+        <div className="field-grid">
+          <label className="field-stack">
+            <span>Preview name</span>
+            <input
+              value={previewName}
+              onChange={(event) => setPreviewName(event.target.value)}
+              placeholder="Shared promotion preview"
+            />
+          </label>
+
+          <label className="field-stack">
+            <span>Description</span>
+            <textarea
+              value={previewDescription}
+              onChange={(event) => setPreviewDescription(event.target.value)}
+              rows={4}
+              placeholder="Explain what you want this preview to stage."
+            />
+          </label>
+        </div>
+
+        <div className="detail-grid">
+          <div className="detail-card">
+            <span className="detail-label">Selected promotions</span>
+            <strong>{selectedObjectIds.length}</strong>
+          </div>
+          <div className="detail-card">
+            <span className="detail-label">Selected normalizations</span>
+            <strong>{selectedNormalizationKeys.length}</strong>
+          </div>
+        </div>
+
+        <div className="button-row">
+          <button
+            type="button"
+            className="action-button"
+            onClick={handlePreviewChangeSet}
+            disabled={previewBusy || !analysis}
+          >
+            {previewBusy ? "Generating preview..." : "Create preview change set"}
+          </button>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={handleApplyChangeSet}
+            disabled={
+              applyBusy ||
+              !previewChangeSet ||
+              previewChangeSet.status === "applied" ||
+              ((previewChangeSet.operations_payload.blocked_objects?.length ?? 0) > 0)
+            }
+          >
+            {applyBusy ? "Applying..." : "Apply preview"}
+          </button>
+        </div>
+
+        {!previewChangeSet ? (
+          <div className="empty-state">
+            No preview generated yet. Run analysis, select objects, and create a change set
+            preview first.
+          </div>
+        ) : (
+          <div className="result-stack">
+            <div className="summary-grid">
+              <div className="summary-card">
+                <span>Status</span>
+                <strong>{previewChangeSet.status}</strong>
+              </div>
+              <div className="summary-card">
+                <span>Object ops</span>
+                <strong>
+                  {numberFromSummary(previewChangeSet.preview_summary, "planned_object_count")}
+                </strong>
+              </div>
+              <div className="summary-card">
+                <span>Rewrites</span>
+                <strong>
+                  {numberFromSummary(previewChangeSet.preview_summary, "reference_rewrite_count")}
+                </strong>
+              </div>
+              <div className="summary-card">
+                <span>Blocked</span>
+                <strong>
+                  {numberFromSummary(previewChangeSet.preview_summary, "blocked_object_count")}
+                </strong>
+              </div>
+            </div>
+
+            <div className="two-column-grid">
+              <section className="result-panel">
+                <h3>Object operations</h3>
+                {renderOperationList(previewChangeSet.operations_payload.object_operations)}
+              </section>
+
+              <section className="result-panel">
+                <h3>Reference rewrites</h3>
+                {renderOperationList(previewChangeSet.operations_payload.reference_rewrites)}
+              </section>
+            </div>
+
+            <div className="two-column-grid">
+              <section className="result-panel">
+                <h3>Normalization operations</h3>
+                {renderOperationList(previewChangeSet.operations_payload.normalization_operations)}
+              </section>
+
+              <section className="result-panel">
+                <h3>Blocked objects</h3>
+                {renderOperationList(previewChangeSet.operations_payload.blocked_objects)}
+              </section>
+            </div>
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  function renderExportPanel() {
+    if (!selectedProject) {
+      return (
+        <section className="workbench-panel">
+          <div className="empty-state">Select a project before generating an export.</div>
+        </section>
+      );
+    }
+
+    return (
+      <section className="workbench-panel">
+        <div className="panel-header">
+          <div>
+            <div className="panel-kicker">Export</div>
+            <h2>Generate XML artifact</h2>
+            <p className="panel-copy">
+              Export serializes the backend working state. If the current preview was applied, the
+              export is linked back to that change set.
+            </p>
+          </div>
+        </div>
+
+        <div className="button-row">
+          <button
+            type="button"
+            className="action-button"
+            onClick={handleExportProject}
+            disabled={exportBusy}
+          >
+            {exportBusy ? "Generating export..." : "Generate export"}
+          </button>
+        </div>
+
+        {selectedAppliedChangeSet ? (
+          <div className="code-pill">Using applied change set {selectedAppliedChangeSet}</div>
+        ) : (
+          <div className="empty-inline">
+            No applied preview selected. Export will serialize the current project working state
+            without attaching a change set reference.
+          </div>
+        )}
+
+        {!latestExport ? (
+          <div className="empty-state">No export generated in this session yet.</div>
+        ) : (
+          <div className="result-stack">
+            <div className="detail-grid">
+              <div className="detail-card">
+                <span className="detail-label">Filename</span>
+                <strong>{latestExport.filename}</strong>
+              </div>
+              <div className="detail-card">
+                <span className="detail-label">Status</span>
+                <strong>{latestExport.export_status}</strong>
+              </div>
+              <div className="detail-card">
+                <span className="detail-label">Created</span>
+                <strong>{formatTimestamp(latestExport.created_at)}</strong>
+              </div>
+            </div>
+            <div className="code-block">{latestExport.storage_path}</div>
+            <div className="code-pill">{shortSha(latestExport.file_sha256)}</div>
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  function renderOverviewPage() {
+    return (
+      <div className="page-stack">
+        <section className="summary-grid console-summary-grid">
+          <article className="summary-card summary-card-accent">
+            <span>Projects</span>
+            <strong>{projects.length}</strong>
+          </article>
+          <article className="summary-card summary-card-teal">
+            <span>Sources</span>
+            <strong>{selectedProject?.sources.length ?? 0}</strong>
+          </article>
+          <article className="summary-card summary-card-warm">
+            <span>Pending preview</span>
+            <strong>{previewChangeSet ? previewChangeSet.status : "none"}</strong>
+          </article>
+          <article className="summary-card summary-card-green">
+            <span>Latest export</span>
+            <strong>{latestExport ? latestExport.export_status : "none"}</strong>
+          </article>
+        </section>
+
+        {renderProjectContextCard()}
+
+        <section className="two-column-grid">
+          {renderRecentEvents(6)}
+          <section className="workbench-panel">
+            <div className="panel-header">
+              <div>
+                <div className="panel-kicker">Workflow</div>
+                <h2>Current activity</h2>
+                <p className="panel-copy">
+                  Use the left menu to move between project setup, source intake, analysis, change
+                  planning, export, and admin controls.
+                </p>
+              </div>
+            </div>
+
+            <div className="event-list">
+              <article className="event-row">
+                <div className="event-name">Projects</div>
+                <div className="event-payload">
+                  Create or select the project that should anchor this migration effort.
+                </div>
+              </article>
+              <article className="event-row">
+                <div className="event-name">Sources</div>
+                <div className="event-payload">
+                  Upload Panorama XML files and let the backend build canonical inventory.
+                </div>
+              </article>
+              <article className="event-row">
+                <div className="event-name">Analysis</div>
+                <div className="event-payload">
+                  Review duplicates, normalization suggestions, promotion candidates, and blockers.
+                </div>
+              </article>
+              <article className="event-row">
+                <div className="event-name">Change Plan</div>
+                <div className="event-payload">
+                  Stage a backend-generated preview, inspect rewrites, then apply with intent.
+                </div>
+              </article>
+              <article className="event-row">
+                <div className="event-name">Exports</div>
+                <div className="event-payload">
+                  Generate XML artifacts from the working state after review and apply.
+                </div>
+              </article>
+            </div>
+          </section>
+        </section>
+      </div>
+    );
+  }
+
+  function renderProjectsPage() {
+    return (
+      <div className="page-stack">
+        <section className="two-column-grid">
+          <section className="workbench-panel">
+            <div className="panel-header">
+              <div>
+                <div className="panel-kicker">Project Setup</div>
+                <h2>Create Project</h2>
+                <p className="panel-copy">
+                  Create a workbench scope for one migration or comparison effort.
+                </p>
+              </div>
+            </div>
+            <CreateProjectForm onCreate={handleCreate} disabled={initialBusy} />
+          </section>
+          {renderProjectContextCard()}
+        </section>
+
+        {renderProjectBrowser()}
+      </div>
+    );
+  }
+
+  function renderSourcesPage() {
+    return (
+      <div className="page-stack">
+        {renderProjectContextCard()}
+
+        {selectedProject ? (
+          <section className="two-column-grid">
+            <section className="workbench-panel">
+              <div className="panel-header">
+                <div>
+                  <div className="panel-kicker">Source Intake</div>
+                  <h2>Upload XML</h2>
+                  <p className="panel-copy">
+                    Upload one or more Panorama exports into this project. Import, parsing, and
+                    indexing stay backend-owned.
+                  </p>
+                </div>
+              </div>
+              <UploadSourceForm projectId={selectedProject.id} onUpload={handleUpload} />
+            </section>
+            {renderRecentEvents(6)}
+          </section>
+        ) : null}
+
+        {renderSourcesInventory()}
+      </div>
+    );
+  }
+
+  function renderAdministrationPage() {
+    if (session?.user.role !== "admin") {
+      return (
+        <section className="workbench-panel">
+          <div className="empty-state">
+            Administration is only visible to local admin users.
+          </div>
+        </section>
+      );
+    }
+
+    return (
+      <div className="page-stack">
+        <section className="workbench-panel">
+          <div className="panel-header">
+            <div>
+              <div className="panel-kicker">Administration</div>
+              <h2>Local access control</h2>
+              <p className="panel-copy">
+                Manage local users here. Panorama semantics, merge rules, and reference handling
+                remain outside the admin surface and stay backend-owned.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <AdminUserPanel
+          currentUserId={session.user.id}
+          users={users}
+          busy={authBusy}
+          onCreate={handleCreateLocalUser}
+          onToggleStatus={handleToggleUserStatus}
+        />
+      </div>
+    );
+  }
+
+  function renderProfilePage() {
+    if (!session) {
+      return null;
+    }
+
+    return (
+      <section className="profile-page-flat">
+        <section className="profile-section">
+          <ProfilePanel
+            busy={authBusy}
+            user={session.user}
+            onSubmit={handleUpdateProfile}
+            variant="embedded"
+          />
+        </section>
+
+        <div className="profile-divider" />
+
+        <section className="profile-section">
+          <PasswordChangePanel
+            busy={authBusy}
+            username={session.user.username}
+            onSubmit={handleChangePassword}
+            title="Password"
+            copy="Update your local account password without leaving the workbench."
+            submitLabel="Save password"
+            variant="embedded"
+          />
+        </section>
+      </section>
+    );
+  }
+
+  function renderActivePage() {
+    switch (activeView) {
+      case "overview":
+        return renderOverviewPage();
+      case "projects":
+        return renderProjectsPage();
+      case "sources":
+        return renderSourcesPage();
+      case "analysis":
+        return (
+          <div className="page-stack">
+            {renderProjectContextCard()}
+            {renderAnalysisPanel()}
+          </div>
+        );
+      case "changes":
+        return (
+          <div className="page-stack">
+            {renderProjectContextCard()}
+            {renderChangePlanPanel()}
+          </div>
+        );
+      case "exports":
+        return (
+          <div className="page-stack">
+            {renderProjectContextCard()}
+            {renderExportPanel()}
+          </div>
+        );
+      case "profile":
+        return renderProfilePage();
+      case "administration":
+        return renderAdministrationPage();
+      default:
+        return renderOverviewPage();
+    }
+  }
+
   return (
     <main className="workbench-root">
       {message ? (
@@ -547,23 +1535,7 @@ export function WorkbenchShell() {
       ) : null}
 
       {!session ? (
-        <>
-          <section className="hero-panel">
-            <div className="hero-brand">
-              <img src="/branding/logo-readme.png" alt="Frying-PAN logo" className="hero-logo" />
-              <div>
-                <div className="hero-kicker">Login Portal</div>
-                <h1 className="hero-title">Panorama review, merge planning, and export.</h1>
-                <p className="hero-copy">
-                  Sign in with a local account to access the Frying-PAN workbench. Panorama
-                  parsing, dependency analysis, and merge planning remain backend-owned.
-                </p>
-              </div>
-            </div>
-          </section>
-
-          <AuthPanel busy={authBusy || initialBusy} onLogin={handleLogin} />
-        </>
+        <AuthPanel busy={authBusy || initialBusy} onLogin={handleLogin} />
       ) : session.password_change_required ? (
         <>
           <section className="hero-panel">
@@ -578,8 +1550,7 @@ export function WorkbenchShell() {
                 </p>
                 <div className="session-strip">
                   <div>
-                    Signed in as <strong>{session.user.display_name}</strong> (@
-                    {session.user.username})
+                    Signed in as <strong>{session.user.username}</strong>
                   </div>
                   <button type="button" className="secondary-button" onClick={handleLogout}>
                     Sign out
@@ -596,665 +1567,135 @@ export function WorkbenchShell() {
           />
         </>
       ) : (
-        <>
-          <section className="hero-panel">
-            <div className="hero-brand">
-              <img src="/branding/logo-readme.png" alt="Frying-PAN logo" className="hero-logo" />
-              <div>
-                <div className="hero-kicker">Workbench</div>
-                <h1 className="hero-title">Review sources, preview changes, and export safely.</h1>
-                <p className="hero-copy">
-                  The browser stays focused on operator workflow. Panorama semantics, dependency
-                  handling, and merge planning continue to live in the backend.
-                </p>
-                <div className="session-strip">
-                  <div>
-                    Signed in as <strong>{session.user.display_name}</strong> (@
-                    {session.user.username})
-                  </div>
-                  <div className="session-strip-meta">
-                    {session.user.role} • session until {formatTimestamp(session.session_expires_at)}
-                  </div>
-                  <button type="button" className="secondary-button" onClick={handleLogout}>
-                    Sign out
+        <section className="console-shell">
+          <aside className="console-sidebar">
+            <div className="console-sidebar-top">
+              <div className="console-brand">
+                <img
+                  src="/branding/logo-readme.png"
+                  alt="Frying-PAN logo"
+                  className="console-brand-logo"
+                />
+              </div>
+
+              <label className="menu-search">
+                <span className="sr-only">Search menu</span>
+                <input
+                  type="search"
+                  value={menuQuery}
+                  onChange={(event) => setMenuQuery(event.target.value)}
+                  placeholder="Search menu"
+                />
+              </label>
+
+              <nav className="console-nav" aria-label="Primary">
+                {filteredNavItems.length === 0 ? (
+                  <div className="empty-inline">No menu matches this search.</div>
+                ) : (
+                  filteredNavItems.map((item) => (
+                    <button
+                      key={item.view}
+                      type="button"
+                      className={`console-nav-button ${
+                        item.view === activeView ? "console-nav-button-active" : ""
+                      }`}
+                      onClick={() => setActiveView(item.view)}
+                    >
+                      <span className="console-nav-copy">
+                        <strong>{item.label}</strong>
+                        <span>{item.helper}</span>
+                      </span>
+                    </button>
+                  ))
+                )}
+              </nav>
+            </div>
+
+            <div className="console-sidebar-footer">
+              <div className="console-user-card">
+                <div className="console-user-card-header">
+                  <div className="console-user-name">{session.user.display_name}</div>
+                  <button
+                    type="button"
+                    className="console-user-action"
+                    onClick={() => setActiveView("profile")}
+                    aria-label="Edit profile"
+                    title="Edit profile"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M10.5 3h3l.7 2.1 2 .8 1.9-1.1 2.1 2.1-1.1 1.9.8 2L22 10.5v3l-2.1.7-.8 2 1.1 1.9-2.1 2.1-1.9-1.1-2 .8-.7 2.1h-3l-.7-2.1-2-.8-1.9 1.1-2.1-2.1 1.1-1.9-.8-2L2 13.5v-3l2.1-.7.8-2-1.1-1.9 2.1-2.1 1.9 1.1 2-.8L10.5 3Z"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <circle cx="12" cy="12" r="3.25" stroke="currentColor" strokeWidth="1.5" />
+                    </svg>
                   </button>
                 </div>
+                <div className="console-user-meta">{formatUserRole(session.user.role)}</div>
+                <div className="console-user-meta console-user-session">
+                  Session until {formatTimestamp(session.session_expires_at)}
+                </div>
               </div>
+              <button
+                type="button"
+                className="secondary-button console-signout"
+                onClick={handleLogout}
+                disabled={authBusy}
+              >
+                Sign out
+              </button>
             </div>
-          </section>
+          </aside>
 
-          {session.user.role === "admin" ? (
-            <AdminUserPanel
-              currentUserId={session.user.id}
-              users={users}
-              busy={authBusy}
-              onCreate={handleCreateLocalUser}
-              onToggleStatus={handleToggleUserStatus}
-            />
-          ) : null}
+          <section className="console-main">
+            <header
+              className={`console-header ${activeView === "profile" ? "console-header-flat" : "workbench-panel"}`}
+            >
+              <div className="console-header-copy">
+                <div className="panel-kicker">{activeNavItem?.label ?? "Workbench"}</div>
+                <h1>{activeNavItem?.label ?? "Workbench"}</h1>
+                <p className="panel-copy">
+                  {activeNavItem?.helper ??
+                    "Browse projects, inspect indexed Panorama sources, plan changes, and export carefully."}
+                </p>
+              </div>
 
-          <section className="workbench-layout">
-            <aside className="sidebar-stack">
-              <section className="workbench-panel">
-                <div className="panel-header">
-                  <div>
-                    <div className="panel-kicker">Project Setup</div>
-                    <h2>Create Project</h2>
-                  </div>
-                </div>
-                <CreateProjectForm onCreate={handleCreate} disabled={initialBusy} />
-              </section>
-
-              <section className="workbench-panel">
-                <div className="panel-header">
-                  <div>
-                    <div className="panel-kicker">Project Browser</div>
-                    <h2>Projects</h2>
-                  </div>
-                </div>
-                {projects.length === 0 ? (
-                  <div className="empty-state">
-                    No accessible projects yet. Create one to start collecting Panorama XML
-                    sources.
-                  </div>
-                ) : (
-                  <div className="project-list">
-                    {projects.map((project) => (
-                      <button
-                        key={project.id}
-                        type="button"
-                        className={`project-list-item ${
-                          project.id === selectedProjectId ? "project-list-item-active" : ""
-                        }`}
-                        onClick={() => {
-                          setSelectedProjectId(project.id);
-                          clearActionState();
-                        }}
-                      >
-                        <div className="project-list-title">{project.name}</div>
-                        <div className="project-list-meta">
-                          {project.description || "No description yet."}
-                        </div>
-                        <div className="project-list-timestamp">
-                          Updated {formatTimestamp(project.updated_at)}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </section>
-            </aside>
-
-            <section className="main-stack">
-            {!selectedProject ? (
-              <section className="workbench-panel">
-                <div className="empty-state">
-                  {projectBusy
-                    ? "Loading selected project..."
-                    : "Select a project to inspect sources, run analysis, and drive the merge workflow."}
-                </div>
-              </section>
-            ) : (
-              <>
-                <section className="workbench-panel">
-                  <div className="panel-header">
-                    <div>
-                      <div className="panel-kicker">Project Detail</div>
-                      <h2>{selectedProject.name}</h2>
-                      <p className="panel-copy">
-                        {selectedProject.description ||
-                          "No project description yet. Use this space to keep migration intent visible."}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="detail-grid">
-                    <div className="detail-card">
-                      <span className="detail-label">Status</span>
-                      <strong>{selectedProject.status}</strong>
-                    </div>
-                    <div className="detail-card">
-                      <span className="detail-label">Sources</span>
-                      <strong>{selectedProject.sources.length}</strong>
-                    </div>
-                    <div className="detail-card">
-                      <span className="detail-label">Events</span>
-                      <strong>{selectedProject.events.length}</strong>
-                    </div>
-                    <div className="detail-card">
-                      <span className="detail-label">Updated</span>
-                      <strong>{formatTimestamp(selectedProject.updated_at)}</strong>
-                    </div>
-                  </div>
-                </section>
-
-                <section className="two-column-grid">
-                  <section className="workbench-panel">
-                    <div className="panel-header">
-                      <div>
-                        <div className="panel-kicker">Source Intake</div>
-                        <h2>Upload XML</h2>
-                      </div>
-                    </div>
-                    <UploadSourceForm projectId={selectedProject.id} onUpload={handleUpload} />
-                  </section>
-
-                  <section className="workbench-panel">
-                    <div className="panel-header">
-                      <div>
-                        <div className="panel-kicker">Audit</div>
-                        <h2>Recent Events</h2>
-                      </div>
-                    </div>
-                    {selectedProject.events.length === 0 ? (
-                      <div className="empty-state">No project events recorded yet.</div>
-                    ) : (
-                      <div className="event-list">
-                        {selectedProject.events.slice(0, 6).map((event) => (
-                          <div key={event.id} className="event-row">
-                            <div className="event-name">{event.event_type}</div>
-                            <div className="event-meta">
-                              {formatTimestamp(event.created_at)}
-                              {event.actor_user_id ? ` • actor ${shortId(event.actor_user_id)}` : ""}
-                            </div>
-                            {event.payload ? <div className="event-payload">{event.payload}</div> : null}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </section>
-                </section>
-
-                <section className="workbench-panel">
-                  <div className="panel-header">
-                    <div>
-                      <div className="panel-kicker">Source Inventory</div>
-                      <h2>Imported Sources</h2>
-                    </div>
-                  </div>
-
-                  {selectedProject.sources.length === 0 ? (
-                    <div className="empty-state">
-                      No sources uploaded yet. Raw XML files remain backend-owned and are stored on
-                      disk outside the browser.
-                    </div>
-                  ) : (
-                    <div className="source-grid">
-                      {selectedProject.sources.map((source) => (
-                        <article key={source.id} className="source-card">
-                          <div className="source-title">{source.label}</div>
-                          <div className="source-meta">
-                            {source.filename} • {source.source_type} • {source.parse_status}
-                          </div>
-                          <div className="source-meta">
-                            Imported {formatTimestamp(source.imported_at)}
-                            {source.imported_by_user_id
-                              ? ` • actor ${shortId(source.imported_by_user_id)}`
-                              : ""}
-                          </div>
-                          <div className="source-path">{shortSha(source.file_sha256)}</div>
-                        </article>
+              {activeView === "profile" ? null : (
+                <div className="console-header-tools">
+                  <label className="field-stack project-switcher">
+                    <span>Active project</span>
+                    <select
+                      value={selectedProjectId ?? ""}
+                      onChange={(event) => {
+                        setSelectedProjectId(event.target.value || null);
+                        clearActionState();
+                      }}
+                      disabled={projects.length === 0}
+                    >
+                      <option value="">No project selected</option>
+                      {projects.map((project) => (
+                        <option key={project.id} value={project.id}>
+                          {project.name}
+                        </option>
                       ))}
-                    </div>
-                  )}
-                </section>
+                    </select>
+                  </label>
+                </div>
+              )}
+            </header>
 
-                <section className="workbench-panel">
-                  <div className="panel-header">
-                    <div>
-                      <div className="panel-kicker">Analysis</div>
-                      <h2>Duplicate, normalization, and promotion review</h2>
-                      <p className="panel-copy">
-                        Filters only scope the backend report. They do not re-implement any config
-                        logic in the browser.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="filter-grid">
-                    <label className="field-stack">
-                      <span>Source filter</span>
-                      <select
-                        value={analysisFilters.source_id}
-                        onChange={(event) =>
-                          setAnalysisFilters((current) => ({
-                            ...current,
-                            source_id: event.target.value,
-                          }))
-                        }
-                      >
-                        <option value="">All imported sources</option>
-                        {selectedProject.sources.map((source) => (
-                          <option key={source.id} value={source.id}>
-                            {source.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="field-stack">
-                      <span>Object type</span>
-                      <select
-                        value={analysisFilters.object_type}
-                        onChange={(event) =>
-                          setAnalysisFilters((current) => ({
-                            ...current,
-                            object_type: event.target.value,
-                          }))
-                        }
-                      >
-                        {objectTypeOptions.map((option) => (
-                          <option key={option.value || "all"} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="field-stack">
-                      <span>Scope path</span>
-                      <input
-                        value={analysisFilters.scope_path}
-                        onChange={(event) =>
-                          setAnalysisFilters((current) => ({
-                            ...current,
-                            scope_path: event.target.value,
-                          }))
-                        }
-                        placeholder="shared/device-group:Device-Group-1"
-                      />
-                    </label>
-
-                    <div className="filter-actions">
-                      <button
-                        type="button"
-                        className="action-button"
-                        onClick={handleRunAnalysis}
-                        disabled={analysisBusy || projectBusy}
-                      >
-                        {analysisBusy ? "Running analysis..." : "Run analysis"}
-                      </button>
-                    </div>
-                  </div>
-
-                  {!analysis ? (
-                    <div className="empty-state">
-                      Run analysis to populate duplicate findings, normalization suggestions, and
-                      promotion assessments for this project.
-                    </div>
-                  ) : (
-                    <div className="result-stack">
-                      <div className="summary-grid">
-                        <div className="summary-card">
-                          <span>Duplicate names</span>
-                          <strong>{analysis.report.duplicate_name_findings.length}</strong>
-                        </div>
-                        <div className="summary-card">
-                          <span>Duplicate values</span>
-                          <strong>{analysis.report.duplicate_value_findings.length}</strong>
-                        </div>
-                        <div className="summary-card">
-                          <span>Normalization suggestions</span>
-                          <strong>{analysis.report.normalization_suggestions.length}</strong>
-                        </div>
-                        <div className="summary-card">
-                          <span>Promotion blockers</span>
-                          <strong>{analysis.report.promotion_blockers.length}</strong>
-                        </div>
-                      </div>
-
-                      <div className="three-column-grid">
-                        <section className="result-panel">
-                          <h3>Duplicate names</h3>
-                          {analysis.report.duplicate_name_findings.length === 0 ? (
-                            <p className="empty-inline">
-                              No duplicate-name findings for this filter set.
-                            </p>
-                          ) : (
-                            analysis.report.duplicate_name_findings.map((finding) => (
-                              <article
-                                key={`${finding.object_type}-${finding.key}`}
-                                className="finding-card"
-                              >
-                                <div className="finding-title">
-                                  {finding.object_type} • {finding.key}
-                                </div>
-                                <ul className="compact-list">
-                                  {finding.items.map((item) => (
-                                    <li key={item.id}>
-                                      <strong>{item.object_name}</strong>
-                                      <span>{item.scope_path}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </article>
-                            ))
-                          )}
-                        </section>
-
-                        <section className="result-panel">
-                          <h3>Duplicate values</h3>
-                          {analysis.report.duplicate_value_findings.length === 0 ? (
-                            <p className="empty-inline">
-                              No duplicate-value findings for this filter set.
-                            </p>
-                          ) : (
-                            analysis.report.duplicate_value_findings.map((finding, index) => (
-                              <article
-                                key={`${finding.object_type}-${finding.key}-${index}`}
-                                className="finding-card"
-                              >
-                                <div className="finding-title">
-                                  {finding.object_type} • {truncateMiddle(finding.key, 42)}
-                                </div>
-                                <div className="code-pill">
-                                  {renderPayloadSummary(finding.normalized_payload)}
-                                </div>
-                                <ul className="compact-list">
-                                  {finding.items.map((item) => (
-                                    <li key={item.id}>
-                                      <strong>{item.object_name}</strong>
-                                      <span>{item.scope_path}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </article>
-                            ))
-                          )}
-                        </section>
-
-                        <section className="result-panel">
-                          <h3>Normalization suggestions</h3>
-                          {analysis.report.normalization_suggestions.length === 0 ? (
-                            <p className="empty-inline">No normalization suggestions right now.</p>
-                          ) : (
-                            analysis.report.normalization_suggestions.map((suggestion) => {
-                              const key = `${suggestion.object_id}::${suggestion.kind}`;
-                              return (
-                                <label key={key} className="selectable-card">
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedNormalizationKeys.includes(key)}
-                                    onChange={() => toggleNormalizationSelection(suggestion)}
-                                  />
-                                  <div>
-                                    <div className="finding-title">{suggestion.object_name}</div>
-                                    <div className="selectable-meta">{suggestion.scope_path}</div>
-                                    <div className="code-pill">
-                                      {suggestion.original_value} → {suggestion.suggested_value}
-                                    </div>
-                                  </div>
-                                </label>
-                              );
-                            })
-                          )}
-                        </section>
-                      </div>
-
-                      <div className="two-column-grid">
-                        <section className="result-panel">
-                          <h3>Promotion candidates</h3>
-                          {analysis.report.promotion_candidates.length === 0 ? (
-                            <p className="empty-inline">
-                              No promotable candidates in the current report.
-                            </p>
-                          ) : (
-                            analysis.report.promotion_candidates.map((candidate) => (
-                              <label key={candidate.object_id} className="selectable-card">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedObjectIds.includes(candidate.object_id)}
-                                  onChange={() => toggleObjectSelection(candidate.object_id)}
-                                />
-                                <div>
-                                  <div className="finding-title">
-                                    {candidate.object_name}{" "}
-                                    <span className="muted-tag">{candidate.object_type}</span>
-                                  </div>
-                                  <div className="selectable-meta">{candidate.scope_path}</div>
-                                  {candidate.dependency_targets.length > 0 ? (
-                                    <div className="selectable-meta">
-                                      Dependencies: {candidate.dependency_targets.join(", ")}
-                                    </div>
-                                  ) : null}
-                                </div>
-                              </label>
-                            ))
-                          )}
-                        </section>
-
-                        <section className="result-panel">
-                          <h3>Promotion blockers</h3>
-                          {analysis.report.promotion_blockers.length === 0 ? (
-                            <p className="empty-inline">No blockers reported in the current report.</p>
-                          ) : (
-                            analysis.report.promotion_blockers.map((blocker) => (
-                              <article key={blocker.object_id} className="finding-card blocked-card">
-                                <div className="finding-title">
-                                  {blocker.object_name}{" "}
-                                  <span className="muted-tag">{blocker.object_type}</span>
-                                </div>
-                                <div className="selectable-meta">{blocker.scope_path}</div>
-                                <div className="pill-row">
-                                  {blocker.blockers.map((item) => (
-                                    <span key={item} className="warning-pill">
-                                      {item}
-                                    </span>
-                                  ))}
-                                </div>
-                              </article>
-                            ))
-                          )}
-                        </section>
-                      </div>
-                    </div>
-                  )}
-                </section>
-
-                <section className="two-column-grid">
-                  <section className="workbench-panel">
-                    <div className="panel-header">
-                      <div>
-                        <div className="panel-kicker">Change Preview</div>
-                        <h2>Preview and apply</h2>
-                        <p className="panel-copy">
-                          Selected candidates and normalization suggestions are sent directly to the
-                          backend preview planner.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="field-grid">
-                      <label className="field-stack">
-                        <span>Preview name</span>
-                        <input
-                          value={previewName}
-                          onChange={(event) => setPreviewName(event.target.value)}
-                          placeholder="Shared promotion preview"
-                        />
-                      </label>
-
-                      <label className="field-stack">
-                        <span>Description</span>
-                        <textarea
-                          value={previewDescription}
-                          onChange={(event) => setPreviewDescription(event.target.value)}
-                          rows={4}
-                          placeholder="Explain what you want this preview to stage."
-                        />
-                      </label>
-                    </div>
-
-                    <div className="detail-grid">
-                      <div className="detail-card">
-                        <span className="detail-label">Selected promotions</span>
-                        <strong>{selectedObjectIds.length}</strong>
-                      </div>
-                      <div className="detail-card">
-                        <span className="detail-label">Selected normalizations</span>
-                        <strong>{selectedNormalizationKeys.length}</strong>
-                      </div>
-                    </div>
-
-                    <div className="button-row">
-                      <button
-                        type="button"
-                        className="action-button"
-                        onClick={handlePreviewChangeSet}
-                        disabled={previewBusy || !analysis}
-                      >
-                        {previewBusy ? "Generating preview..." : "Create preview change set"}
-                      </button>
-                      <button
-                        type="button"
-                        className="secondary-button"
-                        onClick={handleApplyChangeSet}
-                        disabled={
-                          applyBusy ||
-                          !previewChangeSet ||
-                          previewChangeSet.status === "applied" ||
-                          ((previewChangeSet.operations_payload.blocked_objects?.length ?? 0) > 0)
-                        }
-                      >
-                        {applyBusy ? "Applying..." : "Apply preview"}
-                      </button>
-                    </div>
-
-                    {!previewChangeSet ? (
-                      <div className="empty-state">
-                        No preview generated yet. Run analysis, select objects, and create a change
-                        set preview first.
-                      </div>
-                    ) : (
-                      <div className="result-stack">
-                        <div className="summary-grid">
-                          <div className="summary-card">
-                            <span>Status</span>
-                            <strong>{previewChangeSet.status}</strong>
-                          </div>
-                          <div className="summary-card">
-                            <span>Object ops</span>
-                            <strong>
-                              {numberFromSummary(
-                                previewChangeSet.preview_summary,
-                                "planned_object_count",
-                              )}
-                            </strong>
-                          </div>
-                          <div className="summary-card">
-                            <span>Rewrites</span>
-                            <strong>
-                              {numberFromSummary(
-                                previewChangeSet.preview_summary,
-                                "reference_rewrite_count",
-                              )}
-                            </strong>
-                          </div>
-                          <div className="summary-card">
-                            <span>Blocked</span>
-                            <strong>
-                              {numberFromSummary(
-                                previewChangeSet.preview_summary,
-                                "blocked_object_count",
-                              )}
-                            </strong>
-                          </div>
-                        </div>
-
-                        <div className="two-column-grid">
-                          <section className="result-panel">
-                            <h3>Object operations</h3>
-                            {renderOperationList(previewChangeSet.operations_payload.object_operations)}
-                          </section>
-
-                          <section className="result-panel">
-                            <h3>Reference rewrites</h3>
-                            {renderOperationList(
-                              previewChangeSet.operations_payload.reference_rewrites,
-                            )}
-                          </section>
-                        </div>
-
-                        <div className="two-column-grid">
-                          <section className="result-panel">
-                            <h3>Normalization operations</h3>
-                            {renderOperationList(
-                              previewChangeSet.operations_payload.normalization_operations,
-                            )}
-                          </section>
-
-                          <section className="result-panel">
-                            <h3>Blocked objects</h3>
-                            {renderOperationList(previewChangeSet.operations_payload.blocked_objects)}
-                          </section>
-                        </div>
-                      </div>
-                    )}
-                  </section>
-
-                  <section className="workbench-panel">
-                    <div className="panel-header">
-                      <div>
-                        <div className="panel-kicker">Export</div>
-                        <h2>Generate XML artifact</h2>
-                        <p className="panel-copy">
-                          Export serializes the backend working state. If the current preview was
-                          applied, the export is linked back to that change set.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="button-row">
-                      <button
-                        type="button"
-                        className="action-button"
-                        onClick={handleExportProject}
-                        disabled={exportBusy}
-                      >
-                        {exportBusy ? "Generating export..." : "Generate export"}
-                      </button>
-                    </div>
-
-                    {selectedAppliedChangeSet ? (
-                      <div className="code-pill">
-                        Using applied change set {selectedAppliedChangeSet}
-                      </div>
-                    ) : (
-                      <div className="empty-inline">
-                        No applied preview selected. Export will serialize the current project
-                        working state without attaching a change set reference.
-                      </div>
-                    )}
-
-                    {!latestExport ? (
-                      <div className="empty-state">No export generated in this session yet.</div>
-                    ) : (
-                      <div className="result-stack">
-                        <div className="detail-grid">
-                          <div className="detail-card">
-                            <span className="detail-label">Filename</span>
-                            <strong>{latestExport.filename}</strong>
-                          </div>
-                          <div className="detail-card">
-                            <span className="detail-label">Status</span>
-                            <strong>{latestExport.export_status}</strong>
-                          </div>
-                          <div className="detail-card">
-                            <span className="detail-label">Created</span>
-                            <strong>{formatTimestamp(latestExport.created_at)}</strong>
-                          </div>
-                        </div>
-                        <div className="code-block">{latestExport.storage_path}</div>
-                        <div className="code-pill">{shortSha(latestExport.file_sha256)}</div>
-                      </div>
-                    )}
-                  </section>
-                </section>
-              </>
-            )}
-            </section>
+            {renderActivePage()}
           </section>
-        </>
+        </section>
       )}
     </main>
   );

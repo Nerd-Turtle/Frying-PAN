@@ -28,15 +28,9 @@ export function AuthPanel({ busy = false, onLogin }: AuthPanelProps) {
 
   return (
     <section className="workbench-panel auth-panel-shell">
-      <div className="panel-header">
-        <div>
-          <div className="panel-kicker">Login Portal</div>
-          <h2>Sign in to Frying-PAN</h2>
-          <p className="panel-copy">
-            Use a local account to access the Panorama workbench. Fresh installs ship with the
-            bootstrap administrator account <strong>chef</strong>.
-          </p>
-        </div>
+      <div className="auth-brand">
+        <img src="/branding/logo-readme.png" alt="Frying-PAN logo" className="auth-brand-logo" />
+        <div className="panel-kicker">Local Access</div>
       </div>
 
       <form onSubmit={handleSubmit} className="auth-form">
