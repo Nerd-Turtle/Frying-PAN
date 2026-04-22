@@ -1,15 +1,17 @@
-from fastapi import APIRouter, Depends, File, UploadFile, status
+from fastapi import APIRouter, Depends, File, Response, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_ready_user
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.project import ProjectCreate, ProjectDetail, ProjectRead
+from app.schemas.project import ProjectCreate, ProjectDetail, ProjectRead, ProjectUpdate
 from app.schemas.source import SourceRead
 from app.services.project_service import (
     create_project,
+    delete_project,
     get_project_or_404,
     list_projects,
+    update_project,
 )
 from app.services.source_service import import_source_upload
 
@@ -40,6 +42,26 @@ def get_project_endpoint(
     db: Session = Depends(get_db),
 ) -> ProjectDetail:
     return get_project_or_404(db, project_id, user_id=current_user.id)
+
+
+@router.patch("/{project_id}", response_model=ProjectRead)
+def update_project_endpoint(
+    project_id: str,
+    payload: ProjectUpdate,
+    current_user: User = Depends(get_current_ready_user),
+    db: Session = Depends(get_db),
+) -> ProjectRead:
+    return update_project(db=db, project_id=project_id, payload=payload, actor=current_user)
+
+
+@router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_project_endpoint(
+    project_id: str,
+    current_user: User = Depends(get_current_ready_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    delete_project(db=db, project_id=project_id, actor=current_user)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post(

@@ -1,11 +1,13 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_admin_user
 from app.db.session import get_db
 from app.models.user import User
+from app.schemas.notification import AuditLogEntryRead
 from app.schemas.user import AdminUserCreateRequest, AdminUserUpdateRequest, UserRead
 from app.services.admin_service import create_local_user, list_users, update_local_user
+from app.services.audit_service import list_audit_log
 from app.services.app_audit_service import log_app_event
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -50,3 +52,12 @@ def update_user_endpoint(
         actor_user_id=current_user.id,
     )
     return user
+
+
+@router.get("/audit-log", response_model=list[AuditLogEntryRead])
+def list_audit_log_endpoint(
+    current_user: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db),
+    limit: int = Query(default=100, ge=1, le=500),
+) -> list[AuditLogEntryRead]:
+    return list_audit_log(db=db, limit=limit)

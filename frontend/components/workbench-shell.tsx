@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { AdminNotificationPanel } from "@/components/admin-notification-panel";
 import { AdminUserPanel } from "@/components/admin-user-panel";
 import { AuthPanel } from "@/components/auth-panel";
 import { CreateProjectForm } from "@/components/create-project-form";
+import { NotificationCenter } from "@/components/notification-center";
 import { PasswordChangePanel } from "@/components/password-change-panel";
 import { ProfilePanel } from "@/components/profile-panel";
+import { ToastStack } from "@/components/toast-stack";
 import { UploadSourceForm } from "@/components/upload-source-form";
 import { formatUserRole } from "@/lib/labels";
 import {
@@ -14,9 +17,13 @@ import {
   changePassword,
   createLocalUser,
   createProject,
+  deleteProject,
   exportProject,
   getProject,
+  getNotificationSettings,
   getSession,
+  listAuditLog,
+  listNotificationHistory,
   listUsers,
   listProjects,
   loginAccount,
@@ -24,15 +31,20 @@ import {
   previewMerge,
   runAnalysis,
   uploadSource,
+  updateNotificationSettings,
+  updateProject,
   updateProfile,
   updateLocalUser,
 } from "@/lib/api";
 import type {
+  AuditLogEntry,
   AnalysisFilters,
   AnalysisRunResponse,
   AuthSession,
   ChangeSetRead,
   ExportRead,
+  NotificationHistoryEntry,
+  NotificationSettings,
   NormalizationSuggestion,
   ProjectDetail,
   ProjectSummary,
@@ -52,7 +64,8 @@ type ConsoleView =
   | "changes"
   | "exports"
   | "profile"
-  | "administration";
+  | "administration"
+  | "audit";
 
 const objectTypeOptions = [
   { value: "", label: "All supported types" },
@@ -74,6 +87,8 @@ export function WorkbenchShell() {
   const [latestExport, setLatestExport] = useState<ExportRead | null>(null);
   const [selectedObjectIds, setSelectedObjectIds] = useState<string[]>([]);
   const [selectedNormalizationKeys, setSelectedNormalizationKeys] = useState<string[]>([]);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [creatingProject, setCreatingProject] = useState(false);
   const [analysisFilters, setAnalysisFilters] = useState({
     source_id: "",
     object_type: "",
@@ -92,7 +107,19 @@ export function WorkbenchShell() {
   const [previewBusy, setPreviewBusy] = useState(false);
   const [applyBusy, setApplyBusy] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
+  const [notificationBusy, setNotificationBusy] = useState(false);
   const [message, setMessage] = useState<WorkbenchMessage | null>(null);
+  const [toastNotifications, setToastNotifications] = useState<
+    Array<WorkbenchMessage & { id: string }>
+  >([]);
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings | null>(
+    null,
+  );
+  const [notificationHistory, setNotificationHistory] = useState<NotificationHistoryEntry[]>([]);
+  const [notificationCenterOpen, setNotificationCenterOpen] = useState(false);
+  const [dismissedNotificationIds, setDismissedNotificationIds] = useState<string[]>([]);
+  const [auditLogEntries, setAuditLogEntries] = useState<AuditLogEntry[]>([]);
+  const [auditBusy, setAuditBusy] = useState(false);
 
   useEffect(() => {
     void initializeShell();
@@ -108,9 +135,60 @@ export function WorkbenchShell() {
   }, [selectedProjectId, session]);
 
   useEffect(() => {
-    if (session?.user.role !== "admin" && activeView === "administration") {
+    if (session?.user.role !== "admin" && (activeView === "administration" || activeView === "audit")) {
       setActiveView("overview");
     }
+  }, [activeView, session]);
+
+  useEffect(() => {
+    setNotificationCenterOpen(false);
+  }, [activeView, selectedProjectId]);
+
+  useEffect(() => {
+    try {
+      const stored = globalThis.localStorage.getItem("frying-pan-dismissed-notifications");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setDismissedNotificationIds(parsed.filter((item): item is string => typeof item === "string"));
+        }
+      }
+    } catch {
+      // Ignore local storage parsing issues and continue with an empty dismissed list.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!message) {
+      return;
+    }
+
+    const id = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
+    setToastNotifications((current) => [{ id, ...message }, ...current].slice(0, 4));
+    setMessage(null);
+
+    const timeout = globalThis.setTimeout(() => {
+      setToastNotifications((current) => current.filter((item) => item.id !== id));
+    }, (notificationSettings?.notification_timeout_seconds ?? 10) * 1000);
+
+    return () => {
+      globalThis.clearTimeout(timeout);
+    };
+  }, [message, notificationSettings]);
+
+  useEffect(() => {
+    if (activeView !== "audit" || session?.user.role !== "admin") {
+      return;
+    }
+
+    void refreshAuditLog();
+    const interval = globalThis.setInterval(() => {
+      void refreshAuditLog();
+    }, 10000);
+
+    return () => {
+      globalThis.clearInterval(interval);
+    };
   }, [activeView, session]);
 
   async function initializeShell(preferredProjectId?: string) {
@@ -150,17 +228,24 @@ export function WorkbenchShell() {
       setUsers([]);
       setSelectedProjectId(null);
       setSelectedProject(null);
+      setNotificationSettings(null);
+      setNotificationHistory([]);
+      setNotificationCenterOpen(false);
       clearActionState();
       return;
     }
 
-    const [projectResponse, userResponse] = await Promise.all([
+    const [projectResponse, userResponse, settingsResponse, historyResponse] = await Promise.all([
       listProjects(),
       currentSession.user.role === "admin" ? listUsers() : Promise.resolve([]),
+      getNotificationSettings(),
+      listNotificationHistory(12),
     ]);
 
     setProjects(projectResponse);
     setUsers(userResponse);
+    setNotificationSettings(settingsResponse);
+    setNotificationHistory(historyResponse);
 
     const nextSelectedProjectId =
       preferredProjectId ?? selectedProjectId ?? projectResponse[0]?.id ?? null;
@@ -193,14 +278,52 @@ export function WorkbenchShell() {
   }
 
   async function refreshProject(projectId: string) {
-      const [projectResponse, detail, userResponse] = await Promise.all([
-        listProjects(),
-        getProject(projectId),
-        session?.user.role === "admin" ? listUsers() : Promise.resolve([]),
-      ]);
-      setProjects(projectResponse);
-      setUsers(userResponse);
-      setSelectedProject(detail);
+    const [projectResponse, detail, userResponse] = await Promise.all([
+      listProjects(),
+      getProject(projectId),
+      session?.user.role === "admin" ? listUsers() : Promise.resolve([]),
+    ]);
+    setProjects(projectResponse);
+    setUsers(userResponse);
+    setSelectedProject(detail);
+  }
+
+  async function refreshNotificationHistory() {
+    setNotificationBusy(true);
+    try {
+      setNotificationHistory(await listNotificationHistory(20));
+    } catch (caught) {
+      if (handlePotentialUnauthorized(caught)) {
+        return;
+      }
+      setMessage({
+        tone: "error",
+        text:
+          caught instanceof Error
+            ? caught.message
+            : "Unknown error while loading recent notifications.",
+      });
+    } finally {
+      setNotificationBusy(false);
+    }
+  }
+
+  async function refreshAuditLog() {
+    setAuditBusy(true);
+    try {
+      setAuditLogEntries(await listAuditLog(150));
+    } catch (caught) {
+      if (handlePotentialUnauthorized(caught)) {
+        return;
+      }
+      setMessage({
+        tone: "error",
+        text:
+          caught instanceof Error ? caught.message : "Unknown error while loading the audit log.",
+      });
+    } finally {
+      setAuditBusy(false);
+    }
   }
 
   async function handleLogin(payload: { username: string; password: string }) {
@@ -293,6 +416,52 @@ export function WorkbenchShell() {
     }
   }
 
+  async function handleSaveNotificationSettings(payload: NotificationSettings) {
+    setNotificationBusy(true);
+    try {
+      const updated = await updateNotificationSettings(payload);
+      setNotificationSettings(updated);
+      await refreshNotificationHistory();
+      setMessage({
+        tone: "success",
+        text: `Notification timeout updated to ${updated.notification_timeout_seconds} seconds.`,
+      });
+    } catch (caught) {
+      if (handlePotentialUnauthorized(caught)) {
+        return;
+      }
+      setMessage({
+        tone: "error",
+        text:
+          caught instanceof Error
+            ? caught.message
+            : "Unknown error while saving notification settings.",
+      });
+    } finally {
+      setNotificationBusy(false);
+    }
+  }
+
+  async function handleOpenAuditLog() {
+    setActiveView("audit");
+    await refreshAuditLog();
+  }
+
+  function handleClearNotificationCenter() {
+    const nextDismissedIds = Array.from(
+      new Set([...dismissedNotificationIds, ...notificationHistory.map((entry) => entry.id)]),
+    );
+    setDismissedNotificationIds(nextDismissedIds);
+    try {
+      globalThis.localStorage.setItem(
+        "frying-pan-dismissed-notifications",
+        JSON.stringify(nextDismissedIds),
+      );
+    } catch {
+      // Ignore storage write failures and keep the in-memory cleared state.
+    }
+  }
+
   async function handleCreate(payload: {
     name: string;
     description?: string;
@@ -300,6 +469,8 @@ export function WorkbenchShell() {
   }) {
     try {
       const created = await createProject(payload);
+      setCreatingProject(false);
+      setEditingProjectId(null);
       await initializeShell(created.id);
       clearActionState();
       setMessage({
@@ -317,6 +488,90 @@ export function WorkbenchShell() {
             ? caught.message
             : "Unknown error while creating the project.",
       });
+    }
+  }
+
+  async function handleUpdateExistingProject(
+    projectId: string,
+    payload: {
+    name: string;
+    description?: string;
+    },
+  ) {
+    
+    setProjectBusy(true);
+    try {
+      await updateProject(projectId, {
+        name: payload.name,
+        description: payload.description ?? null,
+      });
+      await refreshProject(projectId);
+      setEditingProjectId(null);
+      setMessage({
+        tone: "success",
+        text: `Updated project "${payload.name}".`,
+      });
+    } catch (caught) {
+      if (handlePotentialUnauthorized(caught)) {
+        return;
+      }
+      setMessage({
+        tone: "error",
+        text:
+          caught instanceof Error
+            ? caught.message
+            : "Unknown error while updating the project.",
+      });
+    } finally {
+      setProjectBusy(false);
+    }
+  }
+
+  async function handleDeleteExistingProject(project: ProjectSummary) {
+    if (
+      !globalThis.confirm(
+        `Delete project "${project.name}"? This will remove its sources, analysis state, previews, and exports.`,
+      )
+    ) {
+      return;
+    }
+
+    setProjectBusy(true);
+    try {
+      await deleteProject(project.id);
+      const refreshedProjects = await listProjects();
+      setProjects(refreshedProjects);
+
+      const nextProjectId =
+        selectedProjectId === project.id
+          ? refreshedProjects[0]?.id ?? null
+          : selectedProjectId;
+
+      setEditingProjectId((current) => (current === project.id ? null : current));
+      setSelectedProjectId(nextProjectId);
+      if (nextProjectId) {
+        await loadProject(nextProjectId);
+      } else {
+        resetProjectView();
+      }
+
+      setMessage({
+        tone: "success",
+        text: `Deleted project "${project.name}".`,
+      });
+    } catch (caught) {
+      if (handlePotentialUnauthorized(caught)) {
+        return;
+      }
+      setMessage({
+        tone: "error",
+        text:
+          caught instanceof Error
+            ? caught.message
+            : "Unknown error while deleting the project.",
+      });
+    } finally {
+      setProjectBusy(false);
     }
   }
 
@@ -578,6 +833,11 @@ export function WorkbenchShell() {
     setProjects([]);
     setSelectedProjectId(null);
     setSelectedProject(null);
+    setNotificationSettings(null);
+    setNotificationHistory([]);
+    setNotificationCenterOpen(false);
+    setAuditLogEntries([]);
+    setToastNotifications([]);
     clearActionState();
   }
 
@@ -643,11 +903,36 @@ export function WorkbenchShell() {
     helper: "Manage your account settings",
   };
 
+  const auditNavItem = {
+    view: "audit" as const,
+    label: "Audit Log",
+    helper: "Review application and project activity history",
+  };
+
   const activeNavItem =
     navItems.find((item) => item.view === activeView) ??
     (activeView === "profile" ? profileNavItem : null) ??
+    (activeView === "audit" ? auditNavItem : null) ??
     navItems[0] ??
     null;
+
+  const showProjectContextInHeader =
+    activeView === "overview" ||
+    activeView === "sources" ||
+    activeView === "analysis" ||
+    activeView === "changes" ||
+    activeView === "exports";
+
+  const selectedProjectHeaderName =
+    selectedProject?.name ??
+    projects.find((project) => project.id === selectedProjectId)?.name ??
+    null;
+
+  const visibleNotificationHistory = useMemo(
+    () =>
+      notificationHistory.filter((entry) => !dismissedNotificationIds.includes(entry.id)),
+    [dismissedNotificationIds, notificationHistory],
+  );
 
   function renderProjectContextCard() {
     if (!selectedProject) {
@@ -702,41 +987,104 @@ export function WorkbenchShell() {
       <section className="workbench-panel">
         <div className="panel-header">
           <div>
-            <div className="panel-kicker">Project Browser</div>
-            <h2>Projects</h2>
+            <h2>Existing projects</h2>
             <p className="panel-copy">
-              Select the project that should drive source intake, analysis, change planning, and
-              export.
+              Select a project to review or edit it, or delete it when the workbench is no longer
+              needed.
             </p>
           </div>
+          <button
+            type="button"
+            className="secondary-button project-create-button"
+            onClick={() => {
+              setCreatingProject((current) => !current);
+              setEditingProjectId(null);
+            }}
+          >
+            {creatingProject ? "Close" : "New project"}
+          </button>
         </div>
 
-        {projects.length === 0 ? (
+        {projects.length === 0 && !creatingProject ? (
           <div className="empty-state">
             No accessible projects yet. Create one to start collecting Panorama XML sources.
           </div>
         ) : (
           <div className="project-list">
+            {creatingProject ? (
+              <article className="project-list-item project-list-item-form">
+                <div className="project-list-editor">
+                  <CreateProjectForm
+                    onCreate={handleCreate}
+                    heading="Create new project"
+                    copy="Create a fresh workbench scope for a new migration or comparison effort."
+                    submitLabel="Create project"
+                    onCancel={() => setCreatingProject(false)}
+                    disabled={projectBusy || initialBusy}
+                  />
+                </div>
+              </article>
+            ) : null}
             {projects.map((project) => (
-              <button
+              <article
                 key={project.id}
-                type="button"
                 className={`project-list-item ${
                   project.id === selectedProjectId ? "project-list-item-active" : ""
                 }`}
-                onClick={() => {
-                  setSelectedProjectId(project.id);
-                  clearActionState();
-                }}
               >
-                <div className="project-list-title">{project.name}</div>
-                <div className="project-list-meta">
-                  {project.description || "No description yet."}
+                <button
+                  type="button"
+                  className="project-list-main"
+                  onClick={() => {
+                    setSelectedProjectId(project.id);
+                    clearActionState();
+                  }}
+                >
+                  <div className="project-list-title">{project.name}</div>
+                  <div className="project-list-meta">
+                    {project.description || "No description yet."}
+                  </div>
+                  <div className="project-list-timestamp">
+                    Updated {formatTimestamp(project.updated_at)}
+                  </div>
+                </button>
+                <div className="project-list-actions">
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => {
+                      setSelectedProjectId(project.id);
+                      setCreatingProject(false);
+                      setEditingProjectId((current) =>
+                        current === project.id ? null : project.id,
+                      );
+                      clearActionState();
+                    }}
+                  >
+                    {editingProjectId === project.id ? "Close" : "Edit"}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-button danger-button"
+                    onClick={() => void handleDeleteExistingProject(project)}
+                    disabled={projectBusy}
+                  >
+                    Delete
+                  </button>
                 </div>
-                <div className="project-list-timestamp">
-                  Updated {formatTimestamp(project.updated_at)}
-                </div>
-              </button>
+                {editingProjectId === project.id ? (
+                  <div className="project-list-editor">
+                    <CreateProjectForm
+                      onCreate={(payload) => handleUpdateExistingProject(project.id, payload)}
+                      initialName={project.name}
+                      initialDescription={project.description ?? ""}
+                      submitLabel="Save changes"
+                      onCancel={() => setEditingProjectId(null)}
+                      disabled={projectBusy}
+                    />
+                  </div>
+                ) : null}
+              </article>
             ))}
           </div>
         )}
@@ -1370,22 +1718,6 @@ export function WorkbenchShell() {
   function renderProjectsPage() {
     return (
       <div className="page-stack">
-        <section className="two-column-grid">
-          <section className="workbench-panel">
-            <div className="panel-header">
-              <div>
-                <div className="panel-kicker">Project Setup</div>
-                <h2>Create Project</h2>
-                <p className="panel-copy">
-                  Create a workbench scope for one migration or comparison effort.
-                </p>
-              </div>
-            </div>
-            <CreateProjectForm onCreate={handleCreate} disabled={initialBusy} />
-          </section>
-          {renderProjectContextCard()}
-        </section>
-
         {renderProjectBrowser()}
       </div>
     );
@@ -1436,7 +1768,6 @@ export function WorkbenchShell() {
         <section className="workbench-panel">
           <div className="panel-header">
             <div>
-              <div className="panel-kicker">Administration</div>
               <h2>Local access control</h2>
               <p className="panel-copy">
                 Manage local users here. Panorama semantics, merge rules, and reference handling
@@ -1453,6 +1784,65 @@ export function WorkbenchShell() {
           onCreate={handleCreateLocalUser}
           onToggleStatus={handleToggleUserStatus}
         />
+
+        <AdminNotificationPanel
+          settings={notificationSettings}
+          busy={notificationBusy}
+          onSave={handleSaveNotificationSettings}
+          onOpenAuditLog={() => void handleOpenAuditLog()}
+        />
+      </div>
+    );
+  }
+
+  function renderAuditPage() {
+    if (session?.user.role !== "admin") {
+      return null;
+    }
+
+    return (
+      <div className="page-stack">
+        <section className="workbench-panel">
+          <div className="panel-header">
+            <div>
+              <h2>Audit log</h2>
+              <p className="panel-copy">
+                Review combined application and project activity for operational auditing. This
+                page refreshes automatically.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => setActiveView("administration")}
+            >
+              Back to administration
+            </button>
+          </div>
+
+          {auditLogEntries.length === 0 ? (
+            <div className="empty-state">
+              {auditBusy ? "Loading audit log..." : "No audit entries recorded yet."}
+            </div>
+          ) : (
+            <div className="notification-history-list">
+              {auditLogEntries.map((entry) => (
+                <article key={`${entry.source}-${entry.id}`} className="notification-history-item">
+                  <div className="notification-history-title">{entry.event_type}</div>
+                  <div className="notification-history-meta">
+                    {entry.source === "application" ? "Application" : "Project"} •{" "}
+                    {entry.actor_display_name ? `${entry.actor_display_name} • ` : ""}
+                    {entry.project_name ? `${entry.project_name} • ` : ""}
+                    {formatTimestamp(entry.created_at)}
+                  </div>
+                  {entry.payload ? (
+                    <div className="notification-history-copy">{entry.payload}</div>
+                  ) : null}
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     );
   }
@@ -1523,6 +1913,8 @@ export function WorkbenchShell() {
         return renderProfilePage();
       case "administration":
         return renderAdministrationPage();
+      case "audit":
+        return renderAuditPage();
       default:
         return renderOverviewPage();
     }
@@ -1530,9 +1922,12 @@ export function WorkbenchShell() {
 
   return (
     <main className="workbench-root">
-      {message ? (
-        <section className={`message-banner message-${message.tone}`}>{message.text}</section>
-      ) : null}
+      <ToastStack
+        notifications={toastNotifications}
+        onDismiss={(id) =>
+          setToastNotifications((current) => current.filter((item) => item.id !== id))
+        }
+      />
 
       {!session ? (
         <AuthPanel busy={authBusy || initialBusy} onLogin={handleLogin} />
@@ -1599,7 +1994,10 @@ export function WorkbenchShell() {
                       className={`console-nav-button ${
                         item.view === activeView ? "console-nav-button-active" : ""
                       }`}
-                      onClick={() => setActiveView(item.view)}
+                      onClick={() => {
+                        setActiveView(item.view);
+                        setNotificationCenterOpen(false);
+                      }}
                     >
                       <span className="console-nav-copy">
                         <strong>{item.label}</strong>
@@ -1661,7 +2059,6 @@ export function WorkbenchShell() {
               className={`console-header ${activeView === "profile" ? "console-header-flat" : "workbench-panel"}`}
             >
               <div className="console-header-copy">
-                <div className="panel-kicker">{activeNavItem?.label ?? "Workbench"}</div>
                 <h1>{activeNavItem?.label ?? "Workbench"}</h1>
                 <p className="panel-copy">
                   {activeNavItem?.helper ??
@@ -1669,28 +2066,29 @@ export function WorkbenchShell() {
                 </p>
               </div>
 
-              {activeView === "profile" ? null : (
-                <div className="console-header-tools">
-                  <label className="field-stack project-switcher">
-                    <span>Active project</span>
-                    <select
-                      value={selectedProjectId ?? ""}
-                      onChange={(event) => {
-                        setSelectedProjectId(event.target.value || null);
-                        clearActionState();
-                      }}
-                      disabled={projects.length === 0}
-                    >
-                      <option value="">No project selected</option>
-                      {projects.map((project) => (
-                        <option key={project.id} value={project.id}>
-                          {project.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-              )}
+              <div className="console-header-tools">
+                {showProjectContextInHeader ? (
+                  <div className="selected-project-context">
+                    <span className="selected-project-context-label">Current project</span>
+                    <strong className="selected-project-context-name">
+                      {selectedProjectHeaderName ?? "No project selected"}
+                    </strong>
+                  </div>
+                ) : null}
+                <NotificationCenter
+                  entries={visibleNotificationHistory}
+                  open={notificationCenterOpen}
+                  onToggle={() => {
+                    if (!notificationCenterOpen) {
+                      void refreshNotificationHistory();
+                    }
+                    setNotificationCenterOpen((current) => !current);
+                  }}
+                  onClose={() => setNotificationCenterOpen(false)}
+                  onClear={handleClearNotificationCenter}
+                  formatTimestamp={formatTimestamp}
+                />
+              </div>
             </header>
 
             {renderActivePage()}

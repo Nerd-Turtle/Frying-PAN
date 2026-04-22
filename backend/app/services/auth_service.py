@@ -180,6 +180,28 @@ def destroy_user_session(db: Session, raw_token: str | None) -> None:
     db.commit()
 
 
+def resolve_user_from_session_token(db: Session, raw_token: str | None) -> User | None:
+    if not raw_token:
+        return None
+
+    session = db.scalars(
+        select(AppSession).where(AppSession.token_hash == _hash_token(raw_token))
+    ).first()
+    if session is None:
+        return None
+
+    now = datetime.now(timezone.utc)
+    expires_at = _coerce_utc(session.expires_at)
+    if expires_at <= now:
+        return None
+
+    user = db.get(User, session.user_id)
+    if user is None or user.status != "active":
+        return None
+
+    return user
+
+
 def build_session_read(db: Session, user: User, session: AppSession) -> SessionRead:
     organizations: list[Organization] = list_user_organizations(db=db, user_id=user.id)
     return SessionRead(

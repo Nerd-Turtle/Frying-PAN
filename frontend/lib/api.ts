@@ -1,4 +1,5 @@
 import type {
+  AuditLogEntry,
   AdminUserCreate,
   AnalysisFilters,
   AnalysisRunResponse,
@@ -6,12 +7,95 @@ import type {
   ChangeSetRead,
   ExportRead,
   HealthResponse,
+  NotificationHistoryEntry,
+  NotificationSettings,
   ProfileUpdate,
   ProjectDetail,
   ProjectSummary,
+  ProjectUpdate,
 } from "@/src/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+
+type ValidationIssue = {
+  type?: string;
+  loc?: Array<string | number>;
+  msg?: string;
+  ctx?: Record<string, unknown>;
+};
+
+async function parseErrorResponse(response: Response): Promise<string> {
+  const contentType = response.headers.get("content-type") ?? "";
+  const rawText = await response.text();
+
+  if (!rawText) {
+    return response.statusText || "Request failed.";
+  }
+
+  if (!contentType.includes("application/json")) {
+    return rawText;
+  }
+
+  try {
+    const parsed = JSON.parse(rawText) as {
+      detail?: string | ValidationIssue[] | Record<string, unknown>;
+    };
+
+    if (typeof parsed.detail === "string") {
+      return parsed.detail;
+    }
+
+    if (Array.isArray(parsed.detail)) {
+      return parsed.detail
+        .slice(0, 3)
+        .map(formatValidationIssue)
+        .join(" ");
+    }
+
+    return rawText;
+  } catch {
+    return rawText;
+  }
+}
+
+function formatValidationIssue(issue: ValidationIssue): string {
+  const field = issue.loc
+    ?.filter((item) => typeof item === "string" && item !== "body")
+    .map((item) => String(item))
+    .at(-1);
+  const label = field
+    ? `${field.replaceAll("_", " ").replace(/^\w/, (char) => char.toUpperCase())}`
+    : "Field";
+
+  if (issue.type === "string_too_short" && typeof issue.ctx?.min_length === "number") {
+    return `${label} must be at least ${issue.ctx.min_length} characters.`;
+  }
+
+  if (issue.type === "string_too_long" && typeof issue.ctx?.max_length === "number") {
+    return `${label} must be at most ${issue.ctx.max_length} characters.`;
+  }
+
+  if (issue.type === "missing") {
+    return `${label} is required.`;
+  }
+
+  if (issue.msg) {
+    if (!field) {
+      return issue.msg;
+    }
+    if (issue.msg.toLowerCase().startsWith(label.toLowerCase())) {
+      return issue.msg;
+    }
+    return `${label}: ${issue.msg}.`.replace(/\.\./g, ".");
+  }
+
+  return "Request data is invalid.";
+}
+
+async function throwApiError(response: Response): Promise<never> {
+  const detail = await parseErrorResponse(response);
+  throw new Error(`${response.status} ${detail}`);
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
@@ -32,8 +116,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`${response.status} ${response.statusText}: ${detail}`);
+    await throwApiError(response);
   }
 
   return (await response.json()) as T;
@@ -62,11 +145,33 @@ async function requestOptional<T>(path: string, init?: RequestInit): Promise<T |
   }
 
   if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`${response.status} ${response.statusText}: ${detail}`);
+    await throwApiError(response);
   }
 
   return (await response.json()) as T;
+}
+
+async function requestVoid(path: string, init?: RequestInit): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      credentials: "include",
+      headers: {
+        ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+        ...init?.headers,
+      },
+      cache: "no-store",
+    });
+  } catch {
+    throw new Error(
+      "Unable to reach the Frying-PAN API from this browser. Check that the backend is running and reachable.",
+    );
+  }
+
+  if (!response.ok) {
+    await throwApiError(response);
+  }
 }
 
 export function getHealth(): Promise<HealthResponse> {
@@ -105,9 +210,8 @@ export function updateProfile(payload: ProfileUpdate): Promise<AuthSession["user
 }
 
 export async function logoutAccount(): Promise<void> {
-  await fetch(`${API_BASE_URL}/api/auth/logout`, {
+  await requestVoid("/api/auth/logout", {
     method: "POST",
-    credentials: "include",
   });
 }
 
@@ -127,6 +231,19 @@ export function createProject(payload: {
   return request<ProjectSummary>("/api/projects", {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+
+export function updateProject(projectId: string, payload: ProjectUpdate): Promise<ProjectSummary> {
+  return request<ProjectSummary>(`/api/projects/${projectId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteProject(projectId: string): Promise<void> {
+  await requestVoid(`/api/projects/${projectId}`, {
+    method: "DELETE",
   });
 }
 
@@ -218,4 +335,25 @@ export function updateLocalUser(
     method: "PATCH",
     body: JSON.stringify(payload),
   });
+}
+
+export function listAuditLog(limit = 100): Promise<AuditLogEntry[]> {
+  return request<AuditLogEntry[]>(`/api/admin/audit-log?limit=${limit}`);
+}
+
+export function getNotificationSettings(): Promise<NotificationSettings> {
+  return request<NotificationSettings>("/api/notifications/settings");
+}
+
+export function updateNotificationSettings(
+  payload: NotificationSettings,
+): Promise<NotificationSettings> {
+  return request<NotificationSettings>("/api/notifications/settings", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listNotificationHistory(limit = 20): Promise<NotificationHistoryEntry[]> {
+  return request<NotificationHistoryEntry[]>(`/api/notifications/history?limit=${limit}`);
 }

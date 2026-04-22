@@ -58,7 +58,6 @@ export function AdminUserPanel({
     <section className="workbench-panel">
       <div className="panel-header">
         <div>
-          <div className="panel-kicker">Administration</div>
           <h2>Local users</h2>
           <p className="panel-copy">
             Admins create and control local accounts here. Panorama merge semantics still remain in

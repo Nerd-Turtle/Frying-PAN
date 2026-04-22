@@ -64,6 +64,29 @@ export type EventRecord = {
   created_at: string;
 };
 
+export type NotificationSettings = {
+  notification_timeout_seconds: number;
+};
+
+export type NotificationHistoryEntry = {
+  id: string;
+  event_type: string;
+  payload?: string | null;
+  actor_display_name?: string | null;
+  project_name?: string | null;
+  created_at: string;
+};
+
+export type AuditLogEntry = {
+  id: string;
+  source: string;
+  event_type: string;
+  payload?: string | null;
+  actor_display_name?: string | null;
+  project_name?: string | null;
+  created_at: string;
+};
+
 export type ProjectSummary = {
   id: string;
   organization_id?: string | null;
@@ -73,6 +96,11 @@ export type ProjectSummary = {
   created_by_user_id?: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type ProjectUpdate = {
+  name?: string;
+  description?: string | null;
 };
 
 export type ProjectDetail = ProjectSummary & {

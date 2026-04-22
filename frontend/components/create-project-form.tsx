@@ -1,19 +1,39 @@
 "use client";
 
 import type { CSSProperties, FormEvent } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type CreateProjectFormProps = {
   onCreate: (payload: {
     name: string;
     description?: string;
   }) => Promise<void>;
+  submitLabel?: string;
+  heading?: string;
+  copy?: string;
+  initialName?: string;
+  initialDescription?: string;
+  onCancel?: () => void;
   disabled?: boolean;
 };
 
-export function CreateProjectForm({ onCreate, disabled = false }: CreateProjectFormProps) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+export function CreateProjectForm({
+  onCreate,
+  submitLabel = "Create project",
+  heading,
+  copy,
+  initialName = "",
+  initialDescription = "",
+  onCancel,
+  disabled = false,
+}: CreateProjectFormProps) {
+  const [name, setName] = useState(initialName);
+  const [description, setDescription] = useState(initialDescription);
+
+  useEffect(() => {
+    setName(initialName);
+    setDescription(initialDescription);
+  }, [initialDescription, initialName]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -26,8 +46,10 @@ export function CreateProjectForm({ onCreate, disabled = false }: CreateProjectF
       description: description.trim() || undefined,
     });
 
-    setName("");
-    setDescription("");
+    if (!initialName && !initialDescription) {
+      setName("");
+      setDescription("");
+    }
   }
 
   return (
@@ -39,6 +61,12 @@ export function CreateProjectForm({ onCreate, disabled = false }: CreateProjectF
         padding: 0,
       }}
     >
+      {heading ? (
+        <div className="profile-section-header">
+          <h2>{heading}</h2>
+          {copy ? <p className="panel-copy">{copy}</p> : null}
+        </div>
+      ) : null}
       <div>
         <label htmlFor="project-name" style={{ display: "block", fontWeight: 600 }}>
           Project name
@@ -68,9 +96,16 @@ export function CreateProjectForm({ onCreate, disabled = false }: CreateProjectF
         />
       </div>
 
-      <button disabled={disabled} type="submit" style={buttonStyle}>
-        {disabled ? "Working..." : "Create project"}
-      </button>
+      <div className="button-row">
+        <button disabled={disabled} type="submit" style={buttonStyle}>
+          {disabled ? "Working..." : submitLabel}
+        </button>
+        {onCancel ? (
+          <button type="button" disabled={disabled} className="secondary-button" onClick={onCancel}>
+            Cancel
+          </button>
+        ) : null}
+      </div>
     </form>
   );
 }

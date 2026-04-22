@@ -1,14 +1,30 @@
+from pathlib import Path
+import shutil
+
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.models.app_audit_event import AppAuditEvent
+from app.models.change_set import ChangeSet
+from app.models.config_object import ConfigObject
+from app.models.config_reference import ConfigReference
+from app.models.event import EventRecord
+from app.models.export_record import ExportRecord
 from app.models.organization_membership import OrganizationMembership
+from app.models.parse_warning import ParseWarning
 from app.models.project import Project
 from app.models.project_membership import ProjectMembership
+from app.models.scope import Scope
 from app.models.source import Source
 from app.models.user import User
-from app.schemas.project import ProjectCreate
+from app.models.working_object import WorkingObject
+from app.models.working_reference import WorkingReference
+from app.schemas.project import ProjectCreate, ProjectUpdate
+from app.core.config import get_settings
+from app.services.app_audit_service import log_app_event
+from app.services.storage_service import delete_stored_file
 from app.services.event_service import log_project_event
 from app.services.organization_service import (
     get_default_organization_for_user,
@@ -86,6 +102,106 @@ def get_project_or_404(db: Session, project_id: str, user_id: str | None = None)
             detail="Project not found.",
         )
     return project
+
+
+def get_project_owner_or_404(db: Session, project_id: str, user_id: str) -> Project:
+    statement = (
+        select(Project)
+        .join(ProjectMembership, ProjectMembership.project_id == Project.id)
+        .where(
+            Project.id == project_id,
+            ProjectMembership.user_id == user_id,
+            ProjectMembership.role == "owner",
+        )
+    )
+    project = db.scalars(statement).first()
+    if project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found.",
+        )
+    return project
+
+
+def update_project(db: Session, project_id: str, payload: ProjectUpdate, actor: User) -> Project:
+    project = get_project_owner_or_404(db=db, project_id=project_id, user_id=actor.id)
+
+    if payload.name is not None:
+        project.name = payload.name.strip()
+    if "description" in payload.model_fields_set:
+        project.description = payload.description.strip() if payload.description else None
+
+    db.add(project)
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A project with that name already exists in this context.",
+        ) from exc
+
+    db.refresh(project)
+    log_project_event(
+        db=db,
+        project_id=project.id,
+        event_type="project.updated",
+        payload=f"Project '{project.name}' updated.",
+        actor_user_id=actor.id,
+    )
+    db.refresh(project)
+    return project
+
+
+def delete_project(db: Session, project_id: str, actor: User) -> None:
+    project = get_project_owner_or_404(db=db, project_id=project_id, user_id=actor.id)
+    project_name = project.name
+
+    export_paths = list(
+        db.scalars(select(ExportRecord.storage_path).where(ExportRecord.project_id == project.id)).all()
+    )
+    source_paths = list(
+        db.scalars(select(Source.storage_path).where(Source.project_id == project.id)).all()
+    )
+
+    log_app_event(
+        db=db,
+        event_type="project.deleted",
+        payload=f"User '{actor.username}' deleted project '{project_name}'.",
+        actor_user_id=actor.id,
+    )
+
+    for storage_path in export_paths + source_paths:
+        delete_stored_file(storage_path)
+
+    for model in (
+        ExportRecord,
+        ChangeSet,
+        WorkingReference,
+        WorkingObject,
+        ConfigReference,
+        ConfigObject,
+        ParseWarning,
+        Scope,
+        Source,
+        EventRecord,
+        AppAuditEvent,
+    ):
+        if hasattr(model, "project_id"):
+            db.execute(delete(model).where(model.project_id == project.id))
+
+    db.execute(delete(ProjectMembership).where(ProjectMembership.project_id == project.id))
+    db.execute(delete(Project).where(Project.id == project.id))
+    db.commit()
+
+    storage_root = Path(get_settings().storage_root)
+    for path in (
+        storage_root / "uploads" / project.id,
+        storage_root / "exports" / project.id,
+        storage_root / "projects" / project.id,
+    ):
+        if path.exists():
+            shutil.rmtree(path, ignore_errors=True)
 
 
 def create_source_record(

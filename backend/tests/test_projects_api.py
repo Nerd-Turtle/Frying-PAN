@@ -48,6 +48,46 @@ def test_project_create_list_and_detail_round_trip() -> None:
         assert matching_project["name"] == project_name
 
 
+def test_project_update_and_delete_round_trip() -> None:
+    project_name = f"project-{uuid4()}"
+
+    with _client() as client:
+        register_and_login(client)
+        create_response = client.post(
+            "/api/projects",
+            json={
+                "name": project_name,
+                "description": "Original description",
+            },
+        )
+        assert create_response.status_code == 201
+        created_project = create_response.json()
+
+        update_response = client.patch(
+            f"/api/projects/{created_project['id']}",
+            json={
+                "name": f"{project_name}-updated",
+                "description": "Updated description",
+            },
+        )
+        assert update_response.status_code == 200
+        updated_project = update_response.json()
+        assert updated_project["name"] == f"{project_name}-updated"
+        assert updated_project["description"] == "Updated description"
+
+        detail_response = client.get(f"/api/projects/{created_project['id']}")
+        assert detail_response.status_code == 200
+        assert any(
+            event["event_type"] == "project.updated" for event in detail_response.json()["events"]
+        )
+
+        delete_response = client.delete(f"/api/projects/{created_project['id']}")
+        assert delete_response.status_code == 204
+
+        deleted_detail_response = client.get(f"/api/projects/{created_project['id']}")
+        assert deleted_detail_response.status_code == 404
+
+
 def test_source_upload_persists_metadata_file_and_events() -> None:
     project_name = f"project-{uuid4()}"
     filename = "phase1-source.xml"

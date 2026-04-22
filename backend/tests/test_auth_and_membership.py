@@ -33,6 +33,25 @@ def test_bootstrap_admin_requires_password_change_then_supports_session_and_logo
         after_logout = client.get("/api/auth/session")
         assert after_logout.status_code == 401
 
+        from app.db.session import SessionLocal
+        from app.models.app_audit_event import AppAuditEvent
+        from sqlalchemy import select
+
+        db = SessionLocal()
+        try:
+            event_types = set(
+                db.scalars(
+                    select(AppAuditEvent.event_type).where(
+                        AppAuditEvent.actor_user_id == session["user"]["id"]
+                    )
+                ).all()
+            )
+        finally:
+            db.close()
+
+        assert "auth.login.succeeded" in event_types
+        assert "auth.logout" in event_types
+
 
 def test_admin_can_create_local_user_and_user_can_login() -> None:
     username = f"operator-{uuid4().hex[:8]}"
@@ -134,6 +153,25 @@ def test_user_can_update_own_profile_details() -> None:
         assert updated["username"] == username
         assert updated["display_name"] == "Updated Name"
         assert updated["email"] == "updated@example.com"
+
+        from app.db.session import SessionLocal
+        from app.models.app_audit_event import AppAuditEvent
+        from sqlalchemy import select
+
+        db = SessionLocal()
+        try:
+            event_types = set(
+                db.scalars(
+                    select(AppAuditEvent.event_type).where(
+                        AppAuditEvent.actor_user_id == updated["id"]
+                    )
+                ).all()
+            )
+        finally:
+            db.close()
+
+        assert "auth.login.succeeded" in event_types
+        assert "auth.profile.updated" in event_types
 
 
 def test_project_access_is_restricted_by_membership() -> None:
@@ -270,3 +308,136 @@ def test_admin_user_management_actions_are_audited() -> None:
         event_types = {event.event_type for event in events}
         assert "admin.user.created" in event_types
         assert "admin.user.updated" in event_types
+
+
+def test_notification_settings_can_be_read_and_updated_by_admin() -> None:
+    with _client() as client:
+        ensure_admin_session(client)
+
+        current_response = client.get("/api/notifications/settings")
+        assert current_response.status_code == 200
+        assert current_response.json()["notification_timeout_seconds"] == 10
+
+        update_response = client.patch(
+            "/api/notifications/settings",
+            json={"notification_timeout_seconds": 15},
+        )
+        assert update_response.status_code == 200
+        assert update_response.json()["notification_timeout_seconds"] == 15
+
+        history_response = client.get("/api/notifications/history?limit=10")
+        assert history_response.status_code == 200
+        assert any(
+            entry["event_type"] == "admin.notifications.updated"
+            for entry in history_response.json()
+        )
+
+
+def test_operator_can_read_notification_settings_but_cannot_update_them() -> None:
+    username = f"notify-{uuid4().hex[:8]}"
+
+    with _client() as admin_client:
+        create_local_user(
+            admin_client,
+            username=username,
+            display_name="Notify Operator",
+            password="Passw0rd!123",
+            must_change_password=False,
+        )
+
+    with _client() as operator_client:
+        login_response = operator_client.post(
+            "/api/auth/login",
+            json={"username": username, "password": "Passw0rd!123"},
+        )
+        assert login_response.status_code == 200
+
+        current_response = operator_client.get("/api/notifications/settings")
+        assert current_response.status_code == 200
+
+        update_response = operator_client.patch(
+            "/api/notifications/settings",
+            json={"notification_timeout_seconds": 12},
+        )
+        assert update_response.status_code == 403
+
+
+def test_admin_audit_log_endpoint_returns_entries() -> None:
+    username = f"audit-view-{uuid4().hex[:8]}"
+
+    with _client() as client:
+        ensure_admin_session(client)
+        create_response = client.post(
+            "/api/admin/users",
+            json={
+                "username": username,
+                "display_name": "Audit Viewer",
+                "password": "Passw0rd!123",
+                "must_change_password": False,
+            },
+        )
+        assert create_response.status_code == 201
+
+        audit_response = client.get("/api/admin/audit-log?limit=25")
+        assert audit_response.status_code == 200
+        entries = audit_response.json()
+        assert any(entry["event_type"] == "admin.user.created" for entry in entries)
+
+
+def test_failed_login_and_validation_errors_are_audited() -> None:
+    with _client() as client:
+        failed_login = client.post(
+            "/api/auth/login",
+            json={"username": "chef", "password": "wrongpass"},
+        )
+        assert failed_login.status_code == 401
+
+        validation_error = client.post(
+            "/api/admin/users",
+            json={
+                "username": "shortpass",
+                "display_name": "Short Pass",
+                "password": "blah",
+                "must_change_password": False,
+            },
+        )
+        assert validation_error.status_code in {401, 422}
+
+        from app.db.session import SessionLocal
+        from app.models.app_audit_event import AppAuditEvent
+        from sqlalchemy import select
+
+        db = SessionLocal()
+        try:
+            event_types = set(db.scalars(select(AppAuditEvent.event_type)).all())
+        finally:
+            db.close()
+
+        assert "auth.login.failed" in event_types
+
+
+def test_admin_validation_failures_are_audited() -> None:
+    with _client() as client:
+        ensure_admin_session(client)
+        response = client.post(
+            "/api/admin/users",
+            json={
+                "username": "validation-user",
+                "display_name": "Validation User",
+                "password": "blah",
+                "must_change_password": False,
+            },
+        )
+        assert response.status_code == 422
+
+        from app.db.session import SessionLocal
+        from app.models.app_audit_event import AppAuditEvent
+        from sqlalchemy import select
+
+        db = SessionLocal()
+        try:
+            event_types = set(db.scalars(select(AppAuditEvent.event_type)).all())
+        finally:
+            db.close()
+
+        assert "app.request.validation_failed" in event_types

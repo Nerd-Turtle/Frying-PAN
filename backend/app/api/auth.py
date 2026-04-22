@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_session
@@ -14,18 +14,35 @@ from app.services.auth_service import (
     create_user_session,
     update_current_user_profile,
 )
+from app.services.app_audit_service import log_app_event
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/login", response_model=SessionRead)
 def login_endpoint(
+    request: Request,
     payload: LoginRequest,
     response: Response,
     db: Session = Depends(get_db),
 ) -> SessionRead:
-    user = authenticate_user(db=db, payload=payload)
+    try:
+        user = authenticate_user(db=db, payload=payload)
+    except Exception:
+        request.state.audit_logged = True
+        log_app_event(
+            db=db,
+            event_type="auth.login.failed",
+            payload=f"Failed sign-in attempt for username '{payload.username.strip().lower()}'.",
+        )
+        raise
     raw_token, session = create_user_session(db=db, user=user)
+    log_app_event(
+        db=db,
+        event_type="auth.login.succeeded",
+        payload=f"User '{user.username}' signed in.",
+        actor_user_id=user.id,
+    )
     attach_session_cookie(response=response, raw_token=raw_token, session=session)
     return build_session_read(db=db, user=user, session=session)
 
@@ -38,6 +55,12 @@ def change_password_endpoint(
 ) -> SessionRead:
     user, session = authenticated
     updated = change_password(db=db, user=user, payload=payload)
+    log_app_event(
+        db=db,
+        event_type="auth.password.changed",
+        payload=f"User '{updated.username}' changed their password.",
+        actor_user_id=updated.id,
+    )
     db.refresh(session)
     return build_session_read(db=db, user=updated, session=session)
 
@@ -49,7 +72,14 @@ def update_profile_endpoint(
     db: Session = Depends(get_db),
 ) -> UserRead:
     user, _ = authenticated
-    return update_current_user_profile(db=db, user=user, payload=payload)
+    updated = update_current_user_profile(db=db, user=user, payload=payload)
+    log_app_event(
+        db=db,
+        event_type="auth.profile.updated",
+        payload=f"User '{updated.username}' updated their profile.",
+        actor_user_id=updated.id,
+    )
+    return updated
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
@@ -58,7 +88,13 @@ def logout_endpoint(
     authenticated: tuple = Depends(get_current_session),
     db: Session = Depends(get_db),
 ) -> Response:
-    _, session = authenticated
+    user, session = authenticated
+    log_app_event(
+        db=db,
+        event_type="auth.logout",
+        payload=f"User '{user.username}' signed out.",
+        actor_user_id=user.id,
+    )
     db.delete(session)
     db.commit()
     clear_session_cookie(response)
