@@ -27,4 +27,16 @@ class ProjectMembership(Base):
     )
 
     project = relationship("Project", back_populates="memberships")
-    user = relationship("User", back_populates="project_memberships")
+    user = relationship("User", back_populates="project_memberships", lazy="joined")
+
+    @property
+    def username(self) -> str | None:
+        if self.user is None:
+            return None
+        return self.user.username
+
+    @property
+    def display_name(self) -> str | None:
+        if self.user is None:
+            return None
+        return self.user.display_name

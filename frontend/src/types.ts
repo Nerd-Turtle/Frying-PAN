@@ -15,6 +15,12 @@ export type UserRecord = {
   updated_at: string;
 };
 
+export type UserDirectoryEntry = {
+  id: string;
+  username: string;
+  display_name: string;
+};
+
 export type OrganizationRecord = {
   id: string;
   name: string;
@@ -93,7 +99,12 @@ export type ProjectSummary = {
   name: string;
   description?: string | null;
   status: string;
+  visibility: "public" | "private";
   created_by_user_id?: string | null;
+  created_by_display_name?: string | null;
+  owner_user_id?: string | null;
+  owner_display_name?: string | null;
+  collaborators?: ProjectCollaborator[];
   created_at: string;
   updated_at: string;
 };
@@ -101,11 +112,20 @@ export type ProjectSummary = {
 export type ProjectUpdate = {
   name?: string;
   description?: string | null;
+  visibility?: "public" | "private";
+  contributor_usernames?: string[];
 };
 
 export type ProjectDetail = ProjectSummary & {
   sources: Source[];
   events: EventRecord[];
+};
+
+export type ProjectCollaborator = {
+  user_id: string;
+  username?: string | null;
+  display_name?: string | null;
+  role: string;
 };
 
 export type AnalysisFilters = {

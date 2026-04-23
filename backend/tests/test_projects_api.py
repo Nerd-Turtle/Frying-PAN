@@ -35,6 +35,10 @@ def test_project_create_list_and_detail_round_trip() -> None:
         assert detail["id"] == created_project["id"]
         assert detail["name"] == project_name
         assert detail["description"] == "Phase 1 API validation"
+        assert detail["visibility"] == "public"
+        assert detail["created_by_display_name"] == "Test Operator"
+        assert detail["owner_display_name"] == "Test Operator"
+        assert detail["collaborators"] == []
         assert detail["sources"] == []
         assert any(event["event_type"] == "project.created" for event in detail["events"])
 
@@ -46,6 +50,27 @@ def test_project_create_list_and_detail_round_trip() -> None:
             project for project in projects if project["id"] == created_project["id"]
         )
         assert matching_project["name"] == project_name
+        assert matching_project["visibility"] == "public"
+        assert matching_project["created_by_display_name"] == "Test Operator"
+        assert matching_project["owner_display_name"] == "Test Operator"
+
+
+def test_project_list_is_sorted_alphabetically_by_name() -> None:
+    with _client() as client:
+        register_and_login(client)
+
+        for project_name in ("Zulu", "alpha", "Bravo"):
+            response = client.post(
+                "/api/projects",
+                json={"name": f"{project_name}-{uuid4()}", "description": "Sort verification"},
+            )
+            assert response.status_code == 201
+
+        list_response = client.get("/api/projects")
+        assert list_response.status_code == 200
+
+        names = [project["name"] for project in list_response.json()]
+        assert names == sorted(names, key=str.lower)
 
 
 def test_project_update_and_delete_round_trip() -> None:

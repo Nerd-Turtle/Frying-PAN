@@ -66,8 +66,8 @@ export function AdminUserPanel({
         </div>
       </div>
 
-      <div className="two-column-grid">
-        <form onSubmit={handleSubmit} className="result-panel">
+      <div className="two-column-grid admin-user-grid">
+        <form onSubmit={handleSubmit} className="result-panel admin-user-form-panel">
           <h3>Create local user</h3>
           <label className="field-stack">
             Username
@@ -118,12 +118,12 @@ export function AdminUserPanel({
           </button>
         </form>
 
-        <div className="result-panel">
+        <div className="result-panel admin-user-list-panel">
           <h3>Current accounts</h3>
           {users.length === 0 ? (
             <div className="empty-state">No local users found.</div>
           ) : (
-            <div className="event-list">
+            <div className="event-list admin-user-scroll-list">
               {users.map((user) => (
                 <article key={user.id} className="event-row">
                   <div className="event-name">

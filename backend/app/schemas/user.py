@@ -17,6 +17,14 @@ class UserRead(BaseModel):
     updated_at: datetime
 
 
+class UserDirectoryEntryRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    username: str
+    display_name: str
+
+
 class LoginRequest(BaseModel):
     username: str = Field(min_length=1, max_length=64)
     password: str = Field(min_length=8, max_length=200)

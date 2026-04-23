@@ -174,9 +174,110 @@ def test_user_can_update_own_profile_details() -> None:
         assert "auth.profile.updated" in event_types
 
 
-def test_project_access_is_restricted_by_membership() -> None:
+def test_ready_user_can_read_active_user_directory() -> None:
+    active_username = f"directory-active-{uuid4().hex[:8]}"
+    disabled_username = f"directory-disabled-{uuid4().hex[:8]}"
+
+    with _client() as admin_client:
+        create_local_user(
+            admin_client,
+            username=active_username,
+            display_name="Directory Active",
+            password="Passw0rd!123",
+            must_change_password=False,
+        )
+        disabled_user = create_local_user(
+            admin_client,
+            username=disabled_username,
+            display_name="Directory Disabled",
+            password="Passw0rd!123",
+            must_change_password=False,
+        )
+        disable_response = admin_client.patch(
+            f"/api/admin/users/{disabled_user['id']}",
+            json={"status": "disabled"},
+        )
+        assert disable_response.status_code == 200
+
+    with _client() as operator_client:
+        register_and_login(operator_client)
+        directory_response = operator_client.get("/api/auth/user-directory")
+        assert directory_response.status_code == 200
+
+        directory = directory_response.json()
+        assert any(user["username"] == active_username for user in directory)
+        assert all(user["username"] != disabled_username for user in directory)
+        assert all(set(user.keys()) == {"id", "username", "display_name"} for user in directory)
+
+
+def test_private_project_access_is_restricted_but_contributors_can_work() -> None:
     owner_username = f"owner-{uuid4().hex[:8]}"
+    contributor_username = f"contrib-{uuid4().hex[:8]}"
     other_username = f"other-{uuid4().hex[:8]}"
+
+    with _client() as admin_client:
+        create_local_user(
+            admin_client,
+            username=owner_username,
+            display_name="Owner",
+            password="Passw0rd!123",
+        )
+        create_local_user(
+            admin_client,
+            username=contributor_username,
+            display_name="Contributor",
+            password="Passw0rd!123",
+        )
+        create_local_user(
+            admin_client,
+            username=other_username,
+            display_name="Other User",
+            password="Passw0rd!123",
+        )
+
+    with _client() as owner_client:
+        login_response = owner_client.post(
+            "/api/auth/login",
+            json={"username": owner_username, "password": "Passw0rd!123"},
+        )
+        assert login_response.status_code == 200
+        project_response = owner_client.post(
+            "/api/projects",
+            json={
+                "name": f"project-{uuid4()}",
+                "description": "Membership boundary",
+                "visibility": "private",
+                "contributor_usernames": [contributor_username],
+            },
+        )
+        assert project_response.status_code == 201
+        project_id = project_response.json()["id"]
+
+        detail_response = owner_client.get(f"/api/projects/{project_id}")
+        assert detail_response.status_code == 200
+
+    with _client() as contributor_client:
+        login_response = contributor_client.post(
+            "/api/auth/login",
+            json={"username": contributor_username, "password": "Passw0rd!123"},
+        )
+        assert login_response.status_code == 200
+        detail_response = contributor_client.get(f"/api/projects/{project_id}")
+        assert detail_response.status_code == 200
+
+    with _client() as other_client:
+        login_response = other_client.post(
+            "/api/auth/login",
+            json={"username": other_username, "password": "Passw0rd!123"},
+        )
+        assert login_response.status_code == 200
+        forbidden_response = other_client.get(f"/api/projects/{project_id}")
+        assert forbidden_response.status_code == 404
+
+
+def test_public_project_is_visible_to_any_ready_user() -> None:
+    owner_username = f"public-owner-{uuid4().hex[:8]}"
+    other_username = f"public-other-{uuid4().hex[:8]}"
 
     with _client() as admin_client:
         create_local_user(
@@ -200,13 +301,10 @@ def test_project_access_is_restricted_by_membership() -> None:
         assert login_response.status_code == 200
         project_response = owner_client.post(
             "/api/projects",
-            json={"name": f"project-{uuid4()}", "description": "Membership boundary"},
+            json={"name": f"project-{uuid4()}", "description": "Public boundary"},
         )
         assert project_response.status_code == 201
         project_id = project_response.json()["id"]
-
-        detail_response = owner_client.get(f"/api/projects/{project_id}")
-        assert detail_response.status_code == 200
 
     with _client() as other_client:
         login_response = other_client.post(
@@ -214,8 +312,13 @@ def test_project_access_is_restricted_by_membership() -> None:
             json={"username": other_username, "password": "Passw0rd!123"},
         )
         assert login_response.status_code == 200
-        forbidden_response = other_client.get(f"/api/projects/{project_id}")
-        assert forbidden_response.status_code == 404
+
+        list_response = other_client.get("/api/projects")
+        assert list_response.status_code == 200
+        assert any(project["id"] == project_id for project in list_response.json())
+
+        detail_response = other_client.get(f"/api/projects/{project_id}")
+        assert detail_response.status_code == 200
 
 
 def test_actor_aware_events_are_recorded_for_workbench_actions() -> None:

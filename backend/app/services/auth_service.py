@@ -117,6 +117,16 @@ def update_current_user_profile(
     return user
 
 
+def list_active_user_directory(db: Session) -> list[User]:
+    return list(
+        db.scalars(
+            select(User)
+            .where(User.status == "active")
+            .order_by(User.display_name.asc(), User.username.asc())
+        ).all()
+    )
+
+
 def create_user_session(db: Session, user: User) -> tuple[str, AppSession]:
     raw_token = secrets.token_urlsafe(32)
     session = AppSession(

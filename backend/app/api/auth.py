@@ -1,10 +1,17 @@
 from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_session
+from app.api.deps import get_current_ready_user, get_current_session
 from app.db.session import get_db
+from app.models.user import User
 from app.schemas.auth import SessionRead
-from app.schemas.user import ChangePasswordRequest, LoginRequest, ProfileUpdateRequest, UserRead
+from app.schemas.user import (
+    ChangePasswordRequest,
+    LoginRequest,
+    ProfileUpdateRequest,
+    UserDirectoryEntryRead,
+    UserRead,
+)
 from app.services.auth_service import (
     attach_session_cookie,
     authenticate_user,
@@ -12,6 +19,7 @@ from app.services.auth_service import (
     change_password,
     clear_session_cookie,
     create_user_session,
+    list_active_user_directory,
     update_current_user_profile,
 )
 from app.services.app_audit_service import log_app_event
@@ -109,3 +117,11 @@ def session_endpoint(
 ) -> SessionRead:
     user, session = authenticated
     return build_session_read(db=db, user=user, session=session)
+
+
+@router.get("/user-directory", response_model=list[UserDirectoryEntryRead])
+def user_directory_endpoint(
+    current_user: User = Depends(get_current_ready_user),
+    db: Session = Depends(get_db),
+) -> list[UserDirectoryEntryRead]:
+    return list_active_user_directory(db=db)

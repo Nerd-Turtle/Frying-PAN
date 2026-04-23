@@ -13,6 +13,7 @@ import type {
   ProjectDetail,
   ProjectSummary,
   ProjectUpdate,
+  UserDirectoryEntry,
 } from "@/src/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
@@ -182,6 +183,10 @@ export function getSession(): Promise<AuthSession | null> {
   return requestOptional<AuthSession>("/api/auth/session");
 }
 
+export function listUserDirectory(): Promise<UserDirectoryEntry[]> {
+  return request<UserDirectoryEntry[]>("/api/auth/user-directory");
+}
+
 export function loginAccount(payload: {
   username: string;
   password: string;
@@ -226,6 +231,8 @@ export function getProject(projectId: string): Promise<ProjectDetail> {
 export function createProject(payload: {
   name: string;
   description?: string;
+  visibility?: "public" | "private";
+  contributor_usernames?: string[];
   organization_id?: string;
 }): Promise<ProjectSummary> {
   return request<ProjectSummary>("/api/projects", {

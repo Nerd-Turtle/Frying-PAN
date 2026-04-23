@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import type { CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AdminNotificationPanel } from "@/components/admin-notification-panel";
 import { AdminUserPanel } from "@/components/admin-user-panel";
@@ -24,8 +25,9 @@ import {
   getSession,
   listAuditLog,
   listNotificationHistory,
-  listUsers,
   listProjects,
+  listUserDirectory,
+  listUsers,
   loginAccount,
   logoutAccount,
   previewMerge,
@@ -48,6 +50,7 @@ import type {
   NormalizationSuggestion,
   ProjectDetail,
   ProjectSummary,
+  UserDirectoryEntry,
   UserRecord,
 } from "@/src/types";
 
@@ -67,6 +70,9 @@ type ConsoleView =
   | "administration"
   | "audit";
 
+type ProjectSortKey = "name" | "creator" | "updated";
+type SortDirection = "asc" | "desc";
+
 const objectTypeOptions = [
   { value: "", label: "All supported types" },
   { value: "address", label: "Address" },
@@ -76,9 +82,15 @@ const objectTypeOptions = [
   { value: "tag", label: "Tag" },
 ];
 
+const ACTIVE_PROJECT_STORAGE_KEY = "frying-pan-active-project-id";
+const PROJECT_TABLE_COLUMN_STORAGE_KEY = "frying-pan-project-table-columns-v2";
+const DEFAULT_PROJECT_COLUMN_WIDTHS = [25, 16, 18, 18, 23];
+const MIN_PROJECT_COLUMN_WIDTHS = [18, 12, 14, 14, 18];
+
 export function WorkbenchShell() {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [users, setUsers] = useState<UserRecord[]>([]);
+  const [userDirectory, setUserDirectory] = useState<UserDirectoryEntry[]>([]);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<ProjectDetail | null>(null);
@@ -94,6 +106,19 @@ export function WorkbenchShell() {
     object_type: "",
     scope_path: "",
   });
+  const [projectSort, setProjectSort] = useState<{
+    key: ProjectSortKey;
+    direction: SortDirection;
+  }>({
+    key: "name",
+    direction: "asc",
+  });
+  const [projectColumnWidths, setProjectColumnWidths] = useState(DEFAULT_PROJECT_COLUMN_WIDTHS);
+  const [projectColumnResize, setProjectColumnResize] = useState<{
+    columnIndex: number;
+    startX: number;
+    startWidths: number[];
+  } | null>(null);
   const [previewName, setPreviewName] = useState("Shared promotion preview");
   const [previewDescription, setPreviewDescription] = useState(
     "Backend-generated preview of selected promotions and normalization updates.",
@@ -120,9 +145,17 @@ export function WorkbenchShell() {
   const [dismissedNotificationIds, setDismissedNotificationIds] = useState<string[]>([]);
   const [auditLogEntries, setAuditLogEntries] = useState<AuditLogEntry[]>([]);
   const [auditBusy, setAuditBusy] = useState(false);
+  const projectTableRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    void initializeShell();
+    void initializeShell(readStoredProjectId());
+  }, []);
+
+  useEffect(() => {
+    const storedWidths = readStoredProjectColumnWidths();
+    if (storedWidths) {
+      setProjectColumnWidths(storedWidths);
+    }
   }, []);
 
   useEffect(() => {
@@ -143,6 +176,20 @@ export function WorkbenchShell() {
   useEffect(() => {
     setNotificationCenterOpen(false);
   }, [activeView, selectedProjectId]);
+
+  useEffect(() => {
+    if (!session || session.password_change_required) {
+      clearStoredProjectId();
+      return;
+    }
+
+    if (selectedProjectId) {
+      writeStoredProjectId(selectedProjectId);
+      return;
+    }
+
+    clearStoredProjectId();
+  }, [selectedProjectId, session]);
 
   useEffect(() => {
     try {
@@ -191,6 +238,52 @@ export function WorkbenchShell() {
     };
   }, [activeView, session]);
 
+  useEffect(() => {
+    writeStoredProjectColumnWidths(projectColumnWidths);
+  }, [projectColumnWidths]);
+
+  useEffect(() => {
+    if (!projectColumnResize) {
+      return;
+    }
+
+    const resizeState = projectColumnResize;
+    const previousCursor = document.body.style.cursor;
+    const previousUserSelect = document.body.style.userSelect;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    function handlePointerMove(event: MouseEvent) {
+      const tableWidth = projectTableRef.current?.clientWidth;
+      if (!tableWidth) {
+        return;
+      }
+
+      setProjectColumnWidths(
+        resizeProjectColumns({
+          columnWidths: resizeState.startWidths,
+          minWidths: MIN_PROJECT_COLUMN_WIDTHS,
+          columnIndex: resizeState.columnIndex,
+          deltaPercent: ((event.clientX - resizeState.startX) / tableWidth) * 100,
+        }),
+      );
+    }
+
+    function handlePointerUp() {
+      setProjectColumnResize(null);
+    }
+
+    window.addEventListener("mousemove", handlePointerMove);
+    window.addEventListener("mouseup", handlePointerUp);
+
+    return () => {
+      document.body.style.cursor = previousCursor;
+      document.body.style.userSelect = previousUserSelect;
+      window.removeEventListener("mousemove", handlePointerMove);
+      window.removeEventListener("mouseup", handlePointerUp);
+    };
+  }, [projectColumnResize]);
+
   async function initializeShell(preferredProjectId?: string) {
     setInitialBusy(true);
 
@@ -226,6 +319,7 @@ export function WorkbenchShell() {
     if (currentSession.password_change_required) {
       setProjects([]);
       setUsers([]);
+      setUserDirectory([]);
       setSelectedProjectId(null);
       setSelectedProject(null);
       setNotificationSettings(null);
@@ -235,20 +329,26 @@ export function WorkbenchShell() {
       return;
     }
 
-    const [projectResponse, userResponse, settingsResponse, historyResponse] = await Promise.all([
+    const [projectResponse, userResponse, userDirectoryResponse, settingsResponse, historyResponse] =
+      await Promise.all([
       listProjects(),
       currentSession.user.role === "admin" ? listUsers() : Promise.resolve([]),
+      listUserDirectory(),
       getNotificationSettings(),
       listNotificationHistory(12),
     ]);
 
     setProjects(projectResponse);
     setUsers(userResponse);
+    setUserDirectory(userDirectoryResponse);
     setNotificationSettings(settingsResponse);
     setNotificationHistory(historyResponse);
 
-    const nextSelectedProjectId =
-      preferredProjectId ?? selectedProjectId ?? projectResponse[0]?.id ?? null;
+    const nextSelectedProjectId = resolvePreferredProjectId({
+      projects: projectResponse,
+      preferredProjectId,
+      selectedProjectId,
+    });
 
     setSelectedProjectId(nextSelectedProjectId);
   }
@@ -278,14 +378,18 @@ export function WorkbenchShell() {
   }
 
   async function refreshProject(projectId: string) {
-    const [projectResponse, detail, userResponse] = await Promise.all([
+    const [projectResponse, userResponse, userDirectoryResponse] = await Promise.all([
       listProjects(),
-      getProject(projectId),
       session?.user.role === "admin" ? listUsers() : Promise.resolve([]),
+      listUserDirectory(),
     ]);
     setProjects(projectResponse);
     setUsers(userResponse);
-    setSelectedProject(detail);
+    setUserDirectory(userDirectoryResponse);
+
+    if (selectedProjectId === projectId) {
+      setSelectedProject(await getProject(projectId));
+    }
   }
 
   async function refreshNotificationHistory() {
@@ -380,6 +484,7 @@ export function WorkbenchShell() {
       if (session?.user.role === "admin") {
         setUsers(await listUsers());
       }
+      setUserDirectory(await listUserDirectory());
       setMessage({
         tone: "success",
         text: "Profile updated.",
@@ -465,6 +570,8 @@ export function WorkbenchShell() {
   async function handleCreate(payload: {
     name: string;
     description?: string;
+    visibility: "public" | "private";
+    contributor_usernames: string[];
     organization_id?: string;
   }) {
     try {
@@ -491,19 +598,34 @@ export function WorkbenchShell() {
     }
   }
 
+  function handleOpenProject(project: ProjectSummary) {
+    setCreatingProject(false);
+    setEditingProjectId(null);
+    setSelectedProjectId(project.id);
+    setActiveView("overview");
+    clearActionState();
+    setMessage({
+      tone: "success",
+      text: `Opened project "${project.name}".`,
+    });
+  }
+
   async function handleUpdateExistingProject(
     projectId: string,
     payload: {
-    name: string;
-    description?: string;
+      name: string;
+      description?: string;
+      visibility: "public" | "private";
+      contributor_usernames: string[];
     },
   ) {
-    
     setProjectBusy(true);
     try {
       await updateProject(projectId, {
         name: payload.name,
         description: payload.description ?? null,
+        visibility: payload.visibility,
+        contributor_usernames: payload.contributor_usernames,
       });
       await refreshProject(projectId);
       setEditingProjectId(null);
@@ -609,6 +731,7 @@ export function WorkbenchShell() {
     try {
       const created = await createLocalUser(payload);
       setUsers(await listUsers());
+      setUserDirectory(await listUserDirectory());
       setMessage({
         tone: "success",
         text: `Created local user ${created.username}.`,
@@ -631,6 +754,7 @@ export function WorkbenchShell() {
         status: user.status === "active" ? "disabled" : "active",
       });
       setUsers(await listUsers());
+      setUserDirectory(await listUserDirectory());
       setMessage({
         tone: "success",
         text: `${user.username} is now ${user.status === "active" ? "disabled" : "active"}.`,
@@ -830,6 +954,7 @@ export function WorkbenchShell() {
 
   function resetWorkbenchState() {
     setUsers([]);
+    setUserDirectory([]);
     setProjects([]);
     setSelectedProjectId(null);
     setSelectedProject(null);
@@ -934,6 +1059,56 @@ export function WorkbenchShell() {
     [dismissedNotificationIds, notificationHistory],
   );
 
+  const sortedProjects = useMemo(
+    () =>
+      [...projects].sort((left, right) =>
+        compareProjects(left, right, projectSort.key, projectSort.direction),
+      ),
+    [projectSort.direction, projectSort.key, projects],
+  );
+
+  const projectTableStyle = useMemo(
+    () =>
+      ({
+        "--project-table-columns": projectColumnWidths
+          .map((width) => `${width.toFixed(2)}%`)
+          .join(" "),
+      }) as CSSProperties,
+    [projectColumnWidths],
+  );
+
+  function toggleProjectSort(key: ProjectSortKey) {
+    setProjectSort((current) =>
+      current.key === key
+        ? { key, direction: current.direction === "asc" ? "desc" : "asc" }
+        : { key, direction: key === "updated" ? "desc" : "asc" },
+    );
+  }
+
+  function startProjectColumnResize(columnIndex: number, clientX: number) {
+    setProjectColumnResize({
+      columnIndex,
+      startX: clientX,
+      startWidths: [...projectColumnWidths],
+    });
+  }
+
+  function renderProjectSortLabel(label: string, key: ProjectSortKey) {
+    const active = projectSort.key === key;
+    const indicator = active ? (projectSort.direction === "asc" ? "↑" : "↓") : "↕";
+
+    return (
+      <button
+        type="button"
+        className={`project-table-sort ${active ? "project-table-sort-active" : ""}`}
+        onClick={() => toggleProjectSort(key)}
+      >
+        <span>{label}</span>
+        <span aria-hidden="true">{indicator}</span>
+      </button>
+    );
+  }
+
   function renderProjectContextCard() {
     if (!selectedProject) {
       return (
@@ -966,12 +1141,20 @@ export function WorkbenchShell() {
             <strong>{selectedProject.status}</strong>
           </div>
           <div className="detail-card">
+            <span className="detail-label">Access</span>
+            <strong>{selectedProject.visibility === "public" ? "Public" : "Private"}</strong>
+          </div>
+          <div className="detail-card">
             <span className="detail-label">Sources</span>
             <strong>{selectedProject.sources.length}</strong>
           </div>
           <div className="detail-card">
             <span className="detail-label">Events</span>
             <strong>{selectedProject.events.length}</strong>
+          </div>
+          <div className="detail-card">
+            <span className="detail-label">Contributors</span>
+            <strong>{selectedProject.collaborators?.length ?? 0}</strong>
           </div>
           <div className="detail-card">
             <span className="detail-label">Updated</span>
@@ -989,8 +1172,8 @@ export function WorkbenchShell() {
           <div>
             <h2>Existing projects</h2>
             <p className="panel-copy">
-              Select a project to review or edit it, or delete it when the workbench is no longer
-              needed.
+              Browse projects in a sortable workbench index, open one when you want to work in it,
+              and keep access and creator context visible.
             </p>
           </div>
           <button
@@ -1015,6 +1198,7 @@ export function WorkbenchShell() {
               <article className="project-list-item project-list-item-form">
                 <div className="project-list-editor">
                   <CreateProjectForm
+                    availableUsers={userDirectory}
                     onCreate={handleCreate}
                     heading="Create new project"
                     copy="Create a fresh workbench scope for a new migration or comparison effort."
@@ -1025,67 +1209,170 @@ export function WorkbenchShell() {
                 </div>
               </article>
             ) : null}
-            {projects.map((project) => (
-              <article
-                key={project.id}
-                className={`project-list-item ${
-                  project.id === selectedProjectId ? "project-list-item-active" : ""
-                }`}
+            {projects.length > 0 ? (
+              <section
+                className="project-table"
+                aria-label="Project directory"
+                ref={projectTableRef}
+                style={projectTableStyle}
               >
-                <button
-                  type="button"
-                  className="project-list-main"
-                  onClick={() => {
-                    setSelectedProjectId(project.id);
-                    clearActionState();
-                  }}
-                >
-                  <div className="project-list-title">{project.name}</div>
-                  <div className="project-list-meta">
-                    {project.description || "No description yet."}
-                  </div>
-                  <div className="project-list-timestamp">
-                    Updated {formatTimestamp(project.updated_at)}
-                  </div>
-                </button>
-                <div className="project-list-actions">
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    onClick={() => {
-                      setSelectedProjectId(project.id);
-                      setCreatingProject(false);
-                      setEditingProjectId((current) =>
-                        current === project.id ? null : project.id,
-                      );
-                      clearActionState();
-                    }}
-                  >
-                    {editingProjectId === project.id ? "Close" : "Edit"}
-                  </button>
-                  <button
-                    type="button"
-                    className="secondary-button danger-button"
-                    onClick={() => void handleDeleteExistingProject(project)}
-                    disabled={projectBusy}
-                  >
-                    Delete
-                  </button>
-                </div>
-                {editingProjectId === project.id ? (
-                  <div className="project-list-editor">
-                    <CreateProjectForm
-                      onCreate={(payload) => handleUpdateExistingProject(project.id, payload)}
-                      initialName={project.name}
-                      initialDescription={project.description ?? ""}
-                      submitLabel="Save changes"
-                      onCancel={() => setEditingProjectId(null)}
-                      disabled={projectBusy}
+                <div className="project-table-header">
+                  <div className="project-table-cell project-table-header-cell project-table-name-column">
+                    {renderProjectSortLabel("Project", "name")}
+                    <button
+                      type="button"
+                      className="project-column-resize-handle"
+                      onMouseDown={(event) => startProjectColumnResize(0, event.clientX)}
+                      aria-label="Resize Project column"
+                      title="Resize Project column"
                     />
                   </div>
-                ) : null}
-              </article>
-            ))}
+                  <div className="project-table-cell project-table-header-cell">
+                    <span className="project-table-header-label">Access</span>
+                    <button
+                      type="button"
+                      className="project-column-resize-handle"
+                      onMouseDown={(event) => startProjectColumnResize(1, event.clientX)}
+                      aria-label="Resize Access column"
+                      title="Resize Access column"
+                    />
+                  </div>
+                  <div className="project-table-cell project-table-header-cell">
+                    {renderProjectSortLabel("Created by", "creator")}
+                    <button
+                      type="button"
+                      className="project-column-resize-handle"
+                      onMouseDown={(event) => startProjectColumnResize(2, event.clientX)}
+                      aria-label="Resize Created by column"
+                      title="Resize Created by column"
+                    />
+                  </div>
+                  <div className="project-table-cell project-table-header-cell">
+                    {renderProjectSortLabel("Updated", "updated")}
+                    <button
+                      type="button"
+                      className="project-column-resize-handle"
+                      onMouseDown={(event) => startProjectColumnResize(3, event.clientX)}
+                      aria-label="Resize Updated column"
+                      title="Resize Updated column"
+                    />
+                  </div>
+                  <div className="project-table-cell project-table-actions-column">
+                    <span className="project-table-header-label">Actions</span>
+                  </div>
+                </div>
+
+                {sortedProjects.map((project) => (
+                  <article
+                    key={project.id}
+                    className={`project-table-row ${
+                      project.id === selectedProjectId ? "project-table-row-active" : ""
+                    }`}
+                  >
+                    <div className="project-table-cell project-table-name-cell">
+                      <div className="project-list-title">
+                        {project.name}
+                        {project.id === selectedProjectId ? (
+                          <span className="project-current-badge">Current</span>
+                        ) : null}
+                      </div>
+                      <div className="project-list-meta">
+                        {project.description || "No description yet."}
+                      </div>
+                    </div>
+                    <div className="project-table-cell">
+                      <div className="project-table-primary">
+                        {project.visibility === "public" ? "Public" : "Private"}
+                      </div>
+                      <div className="project-list-timestamp">
+                        {renderVisibilityDetail(project)}
+                      </div>
+                    </div>
+                    <div className="project-table-cell">
+                      <div className="project-table-primary">
+                        {project.created_by_display_name || "Unknown"}
+                      </div>
+                      <div className="project-list-timestamp">
+                        Created {formatTimestamp(project.created_at)}
+                      </div>
+                    </div>
+                    <div className="project-table-cell">
+                      <div className="project-table-primary">
+                        {formatTimestamp(project.updated_at)}
+                      </div>
+                    </div>
+                    <div className="project-table-cell project-table-actions">
+                      <button
+                        type="button"
+                        className={
+                          project.id === selectedProjectId
+                            ? "primary-button compact-button"
+                            : "secondary-button compact-button"
+                        }
+                        onClick={() => handleOpenProject(project)}
+                        disabled={project.id === selectedProjectId || projectBusy}
+                      >
+                        {project.id === selectedProjectId ? "Opened" : "Open"}
+                      </button>
+                      <button
+                        type="button"
+                        className={`project-icon-button ${
+                          editingProjectId === project.id ? "project-icon-button-active" : ""
+                        }`}
+                        onClick={() => {
+                          setCreatingProject(false);
+                          setEditingProjectId((current) =>
+                            current === project.id ? null : project.id,
+                          );
+                        }}
+                        aria-label={
+                          editingProjectId === project.id ? "Close project editor" : "Edit project"
+                        }
+                        aria-pressed={editingProjectId === project.id}
+                        title={
+                          editingProjectId === project.id ? "Close project editor" : "Edit project"
+                        }
+                      >
+                        <ProjectSettingsIcon />
+                        <span className="sr-only">
+                          {editingProjectId === project.id ? "Close project editor" : "Edit project"}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className="project-icon-button project-icon-button-danger"
+                        onClick={() => void handleDeleteExistingProject(project)}
+                        aria-label={`Delete ${project.name}`}
+                        disabled={projectBusy}
+                        title={`Delete ${project.name}`}
+                      >
+                        <ProjectDeleteIcon />
+                        <span className="sr-only">Delete {project.name}</span>
+                      </button>
+                    </div>
+                    {editingProjectId === project.id ? (
+                      <div className="project-table-editor">
+                        <CreateProjectForm
+                          availableUsers={userDirectory}
+                          onCreate={(payload) => handleUpdateExistingProject(project.id, payload)}
+                          initialName={project.name}
+                          initialDescription={project.description ?? ""}
+                          initialVisibility={project.visibility}
+                          initialContributorUsernames={
+                            project.collaborators
+                              ?.map((collaborator) => collaborator.username || "")
+                              .filter(Boolean) ?? []
+                          }
+                          submitLabel="Save changes"
+                          onCancel={() => setEditingProjectId(null)}
+                          disabled={projectBusy}
+                        />
+                      </div>
+                    ) : null}
+                  </article>
+                ))}
+              </section>
+            ) : null}
           </div>
         )}
       </section>
@@ -2111,6 +2398,213 @@ function compactFilters(filters: Record<string, string>): AnalysisFilters {
     result.scope_path = filters.scope_path.trim();
   }
   return result;
+}
+
+function resolvePreferredProjectId({
+  projects,
+  preferredProjectId,
+  selectedProjectId,
+}: {
+  projects: ProjectSummary[];
+  preferredProjectId?: string;
+  selectedProjectId?: string | null;
+}): string | null {
+  const knownProjectIds = new Set(projects.map((project) => project.id));
+  const requestedProjectId = preferredProjectId ?? selectedProjectId ?? null;
+
+  if (requestedProjectId && knownProjectIds.has(requestedProjectId)) {
+    return requestedProjectId;
+  }
+
+  return projects[0]?.id ?? null;
+}
+
+function compareProjects(
+  left: ProjectSummary,
+  right: ProjectSummary,
+  key: ProjectSortKey,
+  direction: SortDirection,
+) {
+  const modifier = direction === "asc" ? 1 : -1;
+
+  if (key === "updated") {
+    return (
+      (new Date(left.updated_at).getTime() - new Date(right.updated_at).getTime()) * modifier
+    );
+  }
+
+  const leftValue =
+    key === "name" ? left.name : left.created_by_display_name || "";
+  const rightValue =
+    key === "name" ? right.name : right.created_by_display_name || "";
+
+  const compared = leftValue.localeCompare(rightValue, undefined, {
+    sensitivity: "base",
+    numeric: true,
+  });
+
+  if (compared !== 0) {
+    return compared * modifier;
+  }
+
+  return left.name.localeCompare(right.name, undefined, {
+    sensitivity: "base",
+    numeric: true,
+  });
+}
+
+function renderVisibilityDetail(project: ProjectSummary) {
+  if (project.visibility === "public") {
+    return "Any signed-in user can contribute.";
+  }
+
+  const collaboratorCount = project.collaborators?.length ?? 0;
+  if (collaboratorCount === 0) {
+    return "Owner only.";
+  }
+  if (collaboratorCount === 1) {
+    return "1 contributor invited.";
+  }
+  return `${collaboratorCount} contributors invited.`;
+}
+
+function ProjectSettingsIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M10.5 3h3l.7 2.1 2 .8 1.9-1.1 2.1 2.1-1.1 1.9.8 2L22 10.5v3l-2.1.7-.8 2 1.1 1.9-2.1 2.1-1.9-1.1-2 .8-.7 2.1h-3l-.7-2.1-2-.8-1.9 1.1-2.1-2.1 1.1-1.9-.8-2L2 13.5v-3l2.1-.7.8-2-1.1-1.9 2.1-2.1 1.9 1.1 2-.8L10.5 3Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="12" r="3.25" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function ProjectDeleteIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4 7h16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M9.5 3h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path
+        d="M18 7l-.8 11.1a2 2 0 0 1-2 1.9H8.8a2 2 0 0 1-2-1.9L6 7"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M10 11v5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M14 11v5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function readStoredProjectId(): string | undefined {
+  try {
+    const stored = globalThis.localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY);
+    return stored?.trim() ? stored : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function writeStoredProjectId(projectId: string) {
+  try {
+    globalThis.localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, projectId);
+  } catch {
+    // Ignore storage write failures and keep the in-memory selection.
+  }
+}
+
+function readStoredProjectColumnWidths(): number[] | null {
+  try {
+    const stored = globalThis.localStorage.getItem(PROJECT_TABLE_COLUMN_STORAGE_KEY);
+    if (!stored) {
+      return null;
+    }
+
+    const parsed = JSON.parse(stored);
+    if (
+      Array.isArray(parsed) &&
+      parsed.length === DEFAULT_PROJECT_COLUMN_WIDTHS.length &&
+      parsed.every((value) => typeof value === "number" && Number.isFinite(value))
+    ) {
+      const normalized = normalizeProjectColumnWidths(parsed);
+      const hasValidMinimums = normalized.every(
+        (width, index) => width >= MIN_PROJECT_COLUMN_WIDTHS[index],
+      );
+      return hasValidMinimums ? normalized : [...DEFAULT_PROJECT_COLUMN_WIDTHS];
+    }
+  } catch {
+    // Ignore local storage parsing issues and fall back to the default table widths.
+  }
+
+  return null;
+}
+
+function writeStoredProjectColumnWidths(widths: number[]) {
+  try {
+    globalThis.localStorage.setItem(
+      PROJECT_TABLE_COLUMN_STORAGE_KEY,
+      JSON.stringify(normalizeProjectColumnWidths(widths)),
+    );
+  } catch {
+    // Ignore storage write failures and keep the in-memory column widths.
+  }
+}
+
+function clearStoredProjectId() {
+  try {
+    globalThis.localStorage.removeItem(ACTIVE_PROJECT_STORAGE_KEY);
+  } catch {
+    // Ignore storage write failures and keep the in-memory selection.
+  }
+}
+
+function resizeProjectColumns({
+  columnWidths,
+  minWidths,
+  columnIndex,
+  deltaPercent,
+}: {
+  columnWidths: number[];
+  minWidths: number[];
+  columnIndex: number;
+  deltaPercent: number;
+}) {
+  const nextWidths = [...columnWidths];
+  const currentWidth = nextWidths[columnIndex];
+  const adjacentWidth = nextWidths[columnIndex + 1];
+  if (currentWidth === undefined || adjacentWidth === undefined) {
+    return normalizeProjectColumnWidths(nextWidths);
+  }
+
+  const proposedCurrent = clamp(
+    currentWidth + deltaPercent,
+    minWidths[columnIndex],
+    currentWidth + adjacentWidth - minWidths[columnIndex + 1],
+  );
+  const appliedDelta = proposedCurrent - currentWidth;
+
+  nextWidths[columnIndex] = proposedCurrent;
+  nextWidths[columnIndex + 1] = adjacentWidth - appliedDelta;
+
+  return normalizeProjectColumnWidths(nextWidths);
+}
+
+function normalizeProjectColumnWidths(widths: number[]) {
+  const total = widths.reduce((sum, width) => sum + width, 0);
+  if (!total) {
+    return [...DEFAULT_PROJECT_COLUMN_WIDTHS];
+  }
+
+  return widths.map((width) => (width / total) * 100);
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
 }
 
 function formatTimestamp(value: string) {

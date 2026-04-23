@@ -22,6 +22,7 @@ class Project(Base):
     name: Mapped[str] = mapped_column(String(200), index=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="draft")
+    visibility: Mapped[str] = mapped_column(String(20), default="public", index=True)
     created_by_user_id: Mapped[str | None] = mapped_column(
         ForeignKey("users.id"),
         nullable=True,
@@ -36,6 +37,7 @@ class Project(Base):
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
+    created_by_user = relationship("User", foreign_keys=[created_by_user_id], lazy="joined")
 
     sources = relationship(
         "Source",
@@ -55,5 +57,36 @@ class Project(Base):
         back_populates="project",
         cascade="all, delete-orphan",
         lazy="selectin",
+        order_by="ProjectMembership.created_at",
     )
     organization = relationship("Organization", back_populates="projects", lazy="joined")
+
+    @property
+    def created_by_display_name(self) -> str | None:
+        if self.created_by_user is None:
+            return None
+        return self.created_by_user.display_name
+
+    @property
+    def owner_user_id(self) -> str | None:
+        owner_membership = next(
+            (membership for membership in self.memberships if membership.role == "owner"),
+            None,
+        )
+        if owner_membership is None:
+            return None
+        return owner_membership.user_id
+
+    @property
+    def owner_display_name(self) -> str | None:
+        owner_membership = next(
+            (membership for membership in self.memberships if membership.role == "owner"),
+            None,
+        )
+        if owner_membership is None or owner_membership.user is None:
+            return None
+        return owner_membership.user.display_name
+
+    @property
+    def collaborators(self) -> list["ProjectMembership"]:
+        return [membership for membership in self.memberships if membership.role != "owner"]

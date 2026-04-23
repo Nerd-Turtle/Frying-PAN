@@ -2,7 +2,7 @@ from pathlib import Path
 import shutil
 
 from fastapi import HTTPException, status
-from sqlalchemy import delete, select
+from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -12,7 +12,6 @@ from app.models.config_object import ConfigObject
 from app.models.config_reference import ConfigReference
 from app.models.event import EventRecord
 from app.models.export_record import ExportRecord
-from app.models.organization_membership import OrganizationMembership
 from app.models.parse_warning import ParseWarning
 from app.models.project import Project
 from app.models.project_membership import ProjectMembership
@@ -35,9 +34,20 @@ from app.services.organization_service import (
 def list_projects(db: Session, user_id: str) -> list[Project]:
     statement = (
         select(Project)
-        .join(ProjectMembership, ProjectMembership.project_id == Project.id)
-        .where(ProjectMembership.user_id == user_id)
-        .order_by(Project.created_at.desc())
+        .outerjoin(
+            ProjectMembership,
+            and_(
+                ProjectMembership.project_id == Project.id,
+                ProjectMembership.user_id == user_id,
+            ),
+        )
+        .where(
+            or_(
+                Project.visibility == "public",
+                ProjectMembership.user_id == user_id,
+            )
+        )
+        .order_by(func.lower(Project.name), Project.created_at.asc())
     )
     return list(db.scalars(statement).all())
 
@@ -57,6 +67,7 @@ def create_project(db: Session, payload: ProjectCreate, actor: User) -> Project:
         organization_id=organization_id,
         name=payload.name.strip(),
         description=payload.description,
+        visibility=payload.visibility,
         created_by_user_id=actor.id,
     )
     db.add(project)
@@ -68,6 +79,12 @@ def create_project(db: Session, payload: ProjectCreate, actor: User) -> Project:
                 user_id=actor.id,
                 role="owner",
             )
+        )
+        _sync_project_contributors(
+            db=db,
+            project=project,
+            contributor_usernames=payload.contributor_usernames,
+            owner_user_id=actor.id,
         )
         db.commit()
     except IntegrityError as exc:
@@ -92,8 +109,19 @@ def get_project_or_404(db: Session, project_id: str, user_id: str | None = None)
     statement = select(Project).where(Project.id == project_id)
     if user_id is not None:
         statement = (
-            statement.join(ProjectMembership, ProjectMembership.project_id == Project.id)
-            .where(ProjectMembership.user_id == user_id)
+            statement.outerjoin(
+                ProjectMembership,
+                and_(
+                    ProjectMembership.project_id == Project.id,
+                    ProjectMembership.user_id == user_id,
+                ),
+            )
+            .where(
+                or_(
+                    Project.visibility == "public",
+                    ProjectMembership.user_id == user_id,
+                )
+            )
         )
     project = db.scalars(statement).first()
     if project is None:
@@ -130,6 +158,15 @@ def update_project(db: Session, project_id: str, payload: ProjectUpdate, actor: 
         project.name = payload.name.strip()
     if "description" in payload.model_fields_set:
         project.description = payload.description.strip() if payload.description else None
+    if payload.visibility is not None:
+        project.visibility = payload.visibility
+    if payload.contributor_usernames is not None:
+        _sync_project_contributors(
+            db=db,
+            project=project,
+            contributor_usernames=payload.contributor_usernames,
+            owner_user_id=actor.id,
+        )
 
     db.add(project)
     try:
@@ -262,3 +299,60 @@ def find_source_by_checksum(
         Source.file_sha256 == file_sha256,
     )
     return db.scalars(statement).first()
+
+
+def _sync_project_contributors(
+    db: Session,
+    project: Project,
+    contributor_usernames: list[str],
+    owner_user_id: str,
+) -> None:
+    normalized_usernames: list[str] = []
+    for username in contributor_usernames:
+        normalized = username.strip().lower()
+        if not normalized or normalized in normalized_usernames:
+            continue
+        normalized_usernames.append(normalized)
+
+    contributor_users: list[User] = []
+    for username in normalized_usernames:
+        user = db.scalars(select(User).where(User.username == username)).first()
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"User '{username}' was not found.",
+            )
+        if user.id == owner_user_id:
+            continue
+        if user.status != "active":
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"User '{username}' is not active.",
+            )
+        contributor_users.append(user)
+
+    existing_contributors = {
+        membership.user_id: membership
+        for membership in project.memberships
+        if membership.role != "owner"
+    }
+    desired_contributor_ids = {user.id for user in contributor_users}
+
+    for user in contributor_users:
+        membership = existing_contributors.get(user.id)
+        if membership is None:
+            db.add(
+                ProjectMembership(
+                    project_id=project.id,
+                    user_id=user.id,
+                    role="contributor",
+                )
+            )
+            continue
+        membership.role = "contributor"
+        db.add(membership)
+
+    for user_id, membership in existing_contributors.items():
+        if user_id in desired_contributor_ids:
+            continue
+        db.delete(membership)
