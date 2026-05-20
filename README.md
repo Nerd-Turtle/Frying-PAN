@@ -1,169 +1,133 @@
 <p align="center">
-  <img src="frontend/public/branding/logo-readme.png" alt="Frying-PAN logo">
+  <img src="assets/branding/logo-readme.png" alt="Frying-PAN logo">
 </p>
 
+# Frying-PAN
 
-Frying-PAN is a web-based Panorama / PAN-OS configuration merge and migration workbench.
+Frying-PAN is an offline desktop workbench for analyzing, modifying,
+migrating, converting, and validating Palo Alto Networks Panorama / PAN-OS
+configuration exports.
 
-The project is intended to help administrators import exported XML configurations from one or more Palo Alto Networks Panorama instances, inspect and index them, compare sources, stage merge decisions, resolve naming and dependency conflicts, and eventually generate a merged output suitable for later import into another Panorama.
+The default workflow is local:
 
-This is deliberately not infrastructure-as-code tooling. Frying-PAN is a configuration workbench focused on XML import, analysis, diff, merge, validation, and export with a modern Web UI and a Python backend.
+1. Download or build the app.
+2. Run it on your workstation.
+3. Open or import configuration files.
+4. Analyze, audit, stage modifications or migration decisions.
+5. Export local reports first, and XML artifacts later after serializer
+   validation is reliable.
+
+No hosted server, Docker deployment, external database, login system, or
+multi-user web application is required for normal use.
 
 ## Status
 
-This repository is an initial scaffold.
+This branch is a foundation rebuild. It intentionally does not claim to be a
+production Panorama merge engine or XML mutator yet.
 
-- PostgreSQL is the locked primary database target.
-- The current scaffold still contains placeholder persistence code that will be brought into alignment during the early roadmap phases.
-- Source XML upload is scaffolded and stores raw files on disk.
-- Analysis, diff/merge, and export flows are placeholder endpoints and UI sections.
-- There is no production-ready Panorama merge engine here yet.
+Current focus:
 
-## Design Principles
+- Python 3.12+ desktop app shell with PySide6.
+- Portable local project folders.
+- Source import and source detection scaffolding.
+- Normalized model skeletons for Palo Alto and future vendor imports.
+- Policy tester, audit, and assurance foundations.
+- CLI entry points so parser and analysis logic can be tested without clicking
+  through the GUI.
 
-- Keep Panorama/PAN-OS parsing, normalization, diff, merge, dependency analysis, and export logic in Python on the backend.
-- Keep the frontend focused on UX: project management, uploads, browsing, review workflows, and conflict-resolution interfaces.
-- Store raw uploaded XML files on disk.
-- Use PostgreSQL for application data and project workbench state.
-- Keep a clear boundary between Frying-PAN application data and project-scoped Panorama workbench data.
-- Normalize XML into internal canonical models before applying merge or diff logic.
-- Treat XML as an import/export boundary, not as the primary in-memory working model.
-- Prefer a clean, maintainable skeleton over fake completeness.
+XML export and mutation will be added carefully after parser and serializer
+tests are strong enough to support it.
 
-## MVP Scope
+## Why Offline First?
 
-The v1 scaffold is intentionally narrow:
+Firewall and Panorama exports are sensitive. Frying-PAN is designed for
+engineers who need to inspect and plan changes without uploading configuration
+data to a hosted service or standing up application infrastructure.
 
-- Project creation
-- Source XML upload
-- Source inventory/indexing scaffold
-- Placeholder analysis pipeline
-- Placeholder diff/merge workflow
-- Export scaffold
+Projects are portable local folders:
 
-Out of scope for now:
+```text
+Frying-PAN-Project/
+  frying-pan.project.json
+  sources/
+    panorama-prod.xml
+    firewall-branch.xml
+  cache/
+    parsed.sqlite
+  exports/
+    report.md
+  logs/
+    frying-pan.log
+```
 
-- A production-ready Panorama merge engine
-- Enterprise auth or SSO
-- Distributed workers, Redis, Celery, or RQ
-- IaC abstraction layers
+SQLite is used as a local cache/index inside a project workspace, not as an
+external application database.
+
+## Product Workflows
+
+- **Modify**: analyze and stage changes for a single Palo Alto XML
+  configuration.
+- **Migrate**: map and plan movement or merging between Palo Alto XML
+  configurations.
+- **Convert**: parse non-Palo Alto source material into a normalized
+  Palo-compatible import package for later review.
+- **Policy Audit / Policy Assurance**: detect policy risks and compare intended
+  behavior before and after planned changes.
+- **Policy Tester**: evaluate a single flow against normalized rule data and
+  explain matching behavior conservatively.
 
 ## Repository Layout
 
 ```text
-/
-  frontend/                # Next.js + TypeScript app
-  backend/                 # FastAPI app
-  storage/                 # bind-mount friendly local app data
-    uploads/
-    projects/
-    exports/
-  docker-compose.yml
-  .env.example
-  README.md
-  AGENTS.md
+frying_pan/
+  app.py                     # PySide6 application entry point
+  gui/                       # Thin desktop UI shell and workspaces
+  sources/                   # Source adapters and type detection
+  normalized/                # Canonical internal models
+  panos/                     # PAN-OS helpers, normalizers, serializers
+  policy/                    # Match, audit, and assurance foundations
+  workflows/                 # Modify, migrate, and convert plan models
+  storage/                   # Portable project workspace and SQLite cache
+  cli/                       # CLI entry points
+tests/
+  fixtures/
+docs/devel/
 ```
 
-## Backend Layout
+## Local Development
 
-```text
-backend/
-  app/
-    api/
-    core/
-    db/
-    models/
-    schemas/
-    services/
-    parsers/
-    merge/
-    main.py
-  tests/
-  requirements.txt
-  Dockerfile
-```
-
-## Frontend Layout
-
-```text
-frontend/
-  app/
-  components/
-  lib/
-  public/
-  src/
-  package.json
-  tsconfig.json
-  Dockerfile
-```
-
-## Quick Start
-
-1. Copy `.env.example` to `.env` if you want to customize local settings.
-2. Run `docker compose up --build`.
-3. Open `http://localhost:3000` for the frontend.
-4. Open `http://localhost:8000/docs` for the backend API docs.
-
-The default local setup mounts `./storage` into the backend container so uploaded XML files and generated project artifacts survive container restarts.
-
-## Local Development Notes
-
-Frontend:
-
-- Next.js + TypeScript
-- Minimal dashboard scaffold for project creation and XML upload
-- Placeholder UI cards for analysis, merge, and export workflows
-
-Backend:
-
-- FastAPI
-- PostgreSQL as the primary database target
-- Alembic for schema migrations
-- Raw uploads written to disk under `storage/uploads/`
-- Placeholder parser and merge modules with explicit TODO markers
-
-## Current API Surface
-
-The starter backend currently exposes:
-
-- `GET /api/health`
-- `GET /api/projects`
-- `POST /api/projects`
-- `GET /api/projects/{project_id}`
-- `POST /api/projects/{project_id}/sources/upload`
-- `POST /api/projects/{project_id}/analysis/run`
-- `POST /api/projects/{project_id}/merge/preview`
-- `POST /api/projects/{project_id}/exports`
-
-Only project creation, listing, detail retrieval, and source upload have meaningful starter behavior right now. The rest are honest scaffolds for future work.
-
-## Database Migrations
-
-Backend schema changes should go through Alembic.
-
-From `backend/`:
+Use Python 3.12 or newer.
 
 ```bash
-alembic upgrade head
-alembic downgrade -1
-alembic revision -m "describe change"
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[dev]"
+pytest
+ruff check .
 ```
 
-The application should not rely on implicit `create_all()` behavior at startup. Migration state is the source of truth for database structure.
+Run the desktop shell:
 
-In the Docker Compose development path, the backend service runs `alembic upgrade head` before starting Uvicorn. For local non-Docker development, run Alembic explicitly before exercising schema-dependent routes.
+```bash
+frying-pan-gui
+```
 
-If you are moving from the earlier pre-Alembic scaffold that auto-created tables at startup, reset the local development database before first booting the migration-driven stack. In Docker Compose that typically means `docker compose down -v`.
+Run the CLI skeleton:
 
-## Development Priorities
+```bash
+frying-pan detect path/to/source.xml
+frying-pan workspace-create ./Frying-PAN-Project --name "Lab Migration"
+```
 
-- Build the canonical backend data model for Panorama configuration objects
-- Parse XML into normalized internal models
-- Add source inventory and dependency-index scaffolding
-- Design merge conflict models before implementing merge logic
-- Keep commits incremental and reviewable
+## Design Principles
 
-## Working Agreement
+- Keep GUI logic thin and workflow-focused.
+- Keep parsing, normalization, policy logic, dependency analysis, and plan
+  behavior in GUI-independent Python modules.
+- Treat raw XML as an import/export boundary, not the primary internal model.
+- Prefer conservative analysis and explicit warnings over hidden assumptions.
+- Do not claim production-safe XML export until serializer tests exist.
+- Use official Palo Alto Networks documentation when encoding PAN-OS or
+  Panorama behavior.
 
-Read [AGENTS.md](/opt/frying-pan/AGENTS.md) before making substantial changes. It defines architecture boundaries and scope guardrails for contributors and coding agents.
-Read [design.md](/opt/frying-pan/docs/devel/design.md) for locked design decisions and [roadmap.md](/opt/frying-pan/docs/devel/roadmap.md) for the current implementation phases.
+Read [AGENTS.md](AGENTS.md) before making architectural changes.

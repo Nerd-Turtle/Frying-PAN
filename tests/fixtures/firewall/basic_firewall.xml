@@ -1,0 +1,9 @@
+<config version="11.1.0">
+  <devices>
+    <entry name="localhost.localdomain">
+      <vsys>
+        <entry name="vsys1" />
+      </vsys>
+    </entry>
+  </devices>
+</config>

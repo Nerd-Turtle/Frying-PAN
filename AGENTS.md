@@ -1,135 +1,150 @@
 # AGENTS.md
 
-## Purpose
+## Product Direction
 
-Frying-PAN is a web-based Panorama / PAN-OS configuration merge and migration workbench.
+Frying-PAN is an offline Python desktop application for Palo Alto Networks
+Panorama / PAN-OS configuration analysis, modification planning, migration
+planning, conversion preparation, policy audit, policy assurance, and policy
+testing.
 
-Its job is to help an operator:
+Normal users should be able to download the app, run it locally, import config
+files, analyze or stage work, and export local reports without hosting a web
+application.
 
-- create a project
-- upload one or more exported XML configuration sources
-- inspect and index those sources
-- scaffold analysis and merge workflows
-- eventually export a merged result
+## Non-Negotiable Architecture Rules
 
-This repository is currently an MVP scaffold. It is not a finished Panorama merge engine.
+- Do not reintroduce FastAPI, Next.js, PostgreSQL, login/auth, Docker-first
+  deployment, or multi-user server architecture unless explicitly requested by
+  the project owner.
+- Use PySide6/Qt for the desktop GUI.
+- Use SQLite only as a local project cache/index inside portable workspaces.
+- Keep GUI logic separate from domain logic.
+- Core engine modules must be usable by the GUI, CLI, tests, future batch mode,
+  and a future optional API mode if one is explicitly requested later.
+- Raw XML is an import/export boundary, not the primary internal model.
+- Do not mutate source XML directly during GUI drag/drop or plan staging.
+- Drag/drop and mapping operations must create staged plan decisions first.
+- Do not claim production-safe XML export until parser and serializer tests
+  exist.
 
-## Architecture Boundaries
+## Palo Alto Networks Behavior
 
-The architecture split is strict:
+- Use official Palo Alto Networks documentation as the primary source for
+  PAN-OS and Panorama behavior.
+- When code encodes PAN-OS behavior, include a short comment referencing the
+  official documentation URL.
+- If official documentation does not clearly answer a behavior, keep the
+  implementation conservative and add a `TODO:` noting the uncertainty.
+- Policy logic must emit warnings when offline behavior cannot be fully
+  determined.
 
-- `frontend/` owns user experience, workflow orchestration, project views, upload forms, browsing, diff/merge presentation, and conflict-resolution interfaces.
-- `backend/` owns all configuration semantics, parsing, normalization, validation, diffing, merge planning, dependency analysis, and export generation.
-- application/account concerns and project-scoped Panorama workbench concerns must remain separated, with `projects` acting as the boundary between them.
+This especially applies to:
 
-The frontend must never become the place where Panorama configuration meaning is implemented.
+- security rule evaluation order and first-match behavior
+- Device Group inheritance and object overrides
+- Shared versus Device Group object behavior
+- Panorama pre-rulebase and post-rulebase behavior
+- application-default behavior
+- URL Category matching behavior
+- NAT/security policy ordering where relevant
+- template and template-stack behavior
+- standalone firewall versus Panorama XML structure differences
 
-## Non-Negotiable Rules
+## Workflow Terminology
 
-- All Panorama/PAN-OS parsing belongs in the backend.
-- All normalization into canonical internal models belongs in the backend.
-- All diff logic belongs in the backend.
-- All merge logic belongs in the backend.
-- All dependency analysis belongs in the backend.
-- All export generation belongs in the backend.
-- The frontend should never directly implement config semantics.
-- XML should be parsed into internal models before merge logic is applied.
-- XML should be treated primarily as an import/export boundary.
+Use these product terms consistently in code and UI:
 
-If a proposed frontend change starts encoding Panorama object rules, reference matching rules, dependency graphs, or merge semantics in TypeScript, stop and move that logic to Python.
+- **Modify** or **Modification** for single Palo Alto XML change planning.
+- **Migrate** or **Migration** for moving or merging Palo Alto XML
+  configurations into another Palo Alto configuration.
+- **Convert** or **Conversion** for non-Palo Alto source material converted into
+  normalized Palo-compatible import packages.
+- **Policy Audit** for full rulebase analysis.
+- **Policy Assurance** for before/after behavior comparison.
+- **Policy Tester** for evaluating a single test flow.
 
-## Contributor Expectations
+## Implementation Expectations
 
-- Favor small, reviewable, incremental commits.
+- Prefer small, reviewable changes.
+- Preserve useful docs, parser research, and branding when replacing old
+  implementation.
 - Keep comments and naming clear.
+- Add explicit `TODO:` markers where real Panorama-specific implementation will
+  go.
 - Prefer maintainable scaffolding over fake completeness.
-- Add explicit `TODO:` markers where real Panorama-specific implementation will go.
-- Keep repository structure clean and unsurprising.
-- Preserve the separation between UX concerns and backend config logic.
-- Contributors and coding agents are authorized to install required apps, packages, and development tools when needed to complete the task, as long as the installation is relevant, minimal, and documented in the work summary when it materially affects the environment.
-- When tests require temporary local services, containers, or other runtime environments, shut them down after validation is complete unless the user explicitly asks to keep them running.
+- Add tests for parser, resolver, policy matching, policy audit, and plan
+  behavior as those areas evolve.
+- Prefer explicit warnings and limitations over generated guesses.
 
-## v1 Scope Guardrails
+## Phase and Task Execution
 
-Keep v1 focused on:
+Frying-PAN uses a roadmap-driven development process.
 
-- project management
-- source upload
-- source inventory/indexing scaffolding
-- analysis scaffolding
-- merge workflow scaffolding
-- export scaffolding
+The roadmap tracks high-level Phases.
 
-Do not overbuild these areas in v1:
+Each Phase document tracks implementation Tasks.
 
-- queueing infrastructure
-- distributed workers
-- Redis / Celery / RQ
-- auth / SSO / RBAC beyond the current minimal local-account and session-cookie baseline
-- multi-service decomposition
-- fake enterprise abstractions
+A Phase may be too large for one Codex prompt/session. When that happens, break
+the Phase into Tasks and complete one or more Tasks per session until the Phase
+is complete.
 
-FastAPI background jobs are enough unless the code clearly proves otherwise.
-PostgreSQL is the primary database target.
-Do not treat SQLite as the architectural baseline going forward unless a task explicitly targets optional local/dev support.
+Do not mark a Phase complete unless every Task in that Phase is complete and
+the full phase validation suite passes.
 
-## Backend Guidance
+Do not mark a Task complete unless its implementation is done, task-specific
+validation passes, related tests are added or updated, and documentation is
+updated where applicable.
 
-When adding backend functionality:
+Use these statuses consistently:
 
-- Prefer a canonical model over ad hoc XML surgery.
-- Isolate XML parsing in dedicated parser modules.
-- Keep merge logic separate from API route handlers.
-- Keep persistence concerns separate from parser and merge code.
-- Keep application/account logic separate from project workbench persistence and config semantics.
-- Make import/export boundaries explicit.
-- Record project/source/event metadata and canonical analysis state in PostgreSQL.
-- Store raw uploaded XML on disk under `storage/`.
+- planned
+- in-progress
+- blocked
+- complete
 
-## Frontend Guidance
+Every completed Task must include validation evidence, such as:
 
-When adding frontend functionality:
+- pytest results
+- ruff results
+- CLI command output
+- GUI/offscreen construction validation
+- parser fixture validation
+- report generation validation
+- documentation update confirmation
 
-- Focus on workflows, visibility, state presentation, and operator confidence.
-- Assume backend endpoints return the source of truth for semantic decisions.
-- Do not recreate merge or dependency logic in the client.
-- Keep TypeScript models aligned to backend response contracts, not independent semantics.
+If validation cannot be performed, leave the Task as blocked or in-progress and
+document why.
 
-Good frontend work:
+Never mark work complete based only on code changes.
 
-- project dashboard scaffolding
-- upload flows
-- source inventories
-- comparison views
-- conflict review UI
-- merge workflow navigation
-- export/download views
+## Scope Guardrails
 
-Bad frontend work:
+Initial rebuild work should focus on:
 
-- parsing PAN-OS XML in the browser
-- deciding config dependency order in the browser
-- implementing object merge behavior in the browser
-- encoding Panorama naming semantics in UI helpers
+- desktop app shell
+- local project workspace model
+- source import model
+- source type detection
+- normalized model skeleton
+- SQLite cache/index foundation
+- CLI test entry points
+- policy match/audit/assurance module skeletons
+- Modify/Migrate/Convert plan skeletons
+- README and contributor documentation
 
-## Review Heuristics
+Avoid in the initial rebuild:
 
-Changes are on the right track when they:
-
-- make the backend more capable as the semantic engine
-- make the frontend better as an operator workbench
-- reduce coupling between XML structure and merge logic
-- keep the codebase easy to run locally and via Docker Compose
-
-Changes need rework when they:
-
-- push config semantics into the frontend
-- manipulate XML directly across many layers
-- introduce speculative infrastructure without current need
-- make the skeleton look more complete than it really is
+- workers, Redis, Celery, RQ
+- SSO/RBAC/login/auth
+- hosted REST API-first design
+- speculative distributed infrastructure
+- direct XML mutation
+- fake production export claims
 
 ## Practical Rule Of Thumb
 
-If a feature answers “what does this Panorama config mean?” or “how should these objects merge?”, it belongs in the backend.
+If a feature answers "what does this configuration mean?" or "how would this
+policy behave?", it belongs in core Python modules.
 
-If a feature answers “how should the operator see, stage, review, and trigger that work?”, it belongs in the frontend.
+If a feature answers "how should the operator see, stage, review, and trigger
+that work?", it belongs in the PySide6 GUI.

@@ -1,976 +1,222 @@
 # Frying-PAN Roadmap
 
-This roadmap breaks implementation into practical phases that can be completed incrementally.
+## Project Direction
 
-Each phase contains:
+Frying-PAN is an offline-first Python desktop workbench for Palo Alto Networks
+Panorama / PAN-OS configuration analysis, modification planning, migration
+planning, conversion preparation, policy audit, policy assurance, and policy
+testing.
 
-- a goal
-- one or more tasks
-- validation needed for a PASS mark
+Current architecture direction:
 
-A phase should only be closed when every task in that phase has passed its validation criteria.
+- Offline-first Python desktop app.
+- PySide6 GUI for normal operator workflows.
+- CLI-supported engine for repeatable parser, analysis, and report validation.
+- Portable local project workspaces.
+- SQLite local cache/index inside project workspaces.
+- Normalized internal model for analysis and planning.
+- Raw XML as an import/export boundary.
+- XML mutation/export remains blocked until parser and serializer tests exist.
+- Policy behavior must be implemented conservatively, validated with tests, and
+  documented with official Palo Alto Networks references where practical.
 
-## Status Model
+Do not reintroduce FastAPI, Next.js, PostgreSQL, login/auth, Docker-first
+deployment, or hosted web architecture unless the project owner explicitly
+changes direction.
 
-Use the following status values when this roadmap begins active tracking:
+## Current Status
 
-- `todo`
-- `in_progress`
-- `blocked`
-- `pass`
+Phase 0/Foundation is complete based on the validation performed during the
+foundation rebuild. Phase 1, PAN-OS Inventory Analyzer, is the active phase.
 
-## Phase 0: Foundation Reset
+The project currently has a desktop shell, CLI skeleton, local workspace model,
+source detection skeleton, normalized model skeleton, plan model skeletons, and
+initial tests. It does not yet have a complete PAN-OS inventory parser or XML
+mutation/export support.
 
-Goal:
+## Phase and Task Model
 
-- align the scaffold with the locked design decisions before deeper feature work begins
+The roadmap tracks high-level Phases.
 
-Status:
+Each linked phase document contains Tasks.
 
-- `pass`
+A Phase can span multiple Codex prompts/sessions.
 
-Tasks:
+Tasks are the preferred unit of implementation for each prompt/session.
 
-### 0.1 Convert backend baseline from SQLite-first to PostgreSQL-first
+A Phase is complete only when all Tasks in the phase are complete and the full
+phase validation suite passes.
 
-Status:
+A Task is complete only when implementation, tests, validation, and required
+documentation updates are complete.
 
-- `pass`
+## Phase Summary
 
-Work:
+| Phase | Name | Status | Detail Doc | Goal |
+|---|---|---|---|---|
+| 0 | Foundation | Complete | [design.md](design.md) | Establish the offline desktop architecture, package skeleton, GUI shell, CLI skeleton, workspace model, and baseline checks. |
+| 1 | PAN-OS Inventory Analyzer | Active | [phase-1.md](../phases/phase-1.md) | Parse Panorama and standalone firewall XML into normalized inventory, dependencies, CLI output, GUI visibility, and reports. |
+| 2 | Policy Tester v1 | Planned | TBD | Evaluate a single test flow with conservative first-match behavior, trace output, later matches, and warnings. |
+| 3 | Policy Audit v1 | Planned | TBD | Analyze full rulebases for obvious shadows, duplicate rules, broad allows, missing references, and App-ID/service uncertainty. |
+| 4 | Dedupe and Conflict Analysis | Planned | TBD | Detect duplicate objects/services, same-name conflicts, unused candidates, and object placement recommendations. |
+| 5 | Modify Plan | Planned | TBD | Stage object/rule modification decisions and generate modification reports without mutating XML. |
+| 6 | Migrate Plan | Planned | TBD | Stage source-to-target scope, object, zone, and rule mappings with dependency inclusion and policy assurance. |
+| 7 | Convert Framework | Planned | TBD | Define normalized import packages, conversion warnings, and future vendor adapters. |
 
-- update backend configuration defaults to PostgreSQL
-- add SQLAlchemy/Alembic-friendly structure if missing
-- remove SQLite-first assumptions from runtime configuration and docs where appropriate
-- keep local storage paths for XML on disk
+## Phase 0: Foundation
 
-PASS validation:
-
-- backend configuration defaults point to PostgreSQL
-- no core docs contradict the PostgreSQL-first decision
-- app starts with PostgreSQL settings without code edits
-
-Suggested validation/tests:
-
-- configuration review of env variables and settings
-- backend startup test against a local PostgreSQL instance or container
-- grep/review for stale SQLite-as-primary wording
-
-### 0.2 Add migration framework baseline
-
-Status:
-
-- `pass`
-
-Work:
-
-- add Alembic configuration
-- create initial migration layout
-- confirm migrations can be generated and applied cleanly
-
-PASS validation:
-
-- Alembic is configured and runnable
-- an empty or initial baseline migration can be applied successfully
-- migration workflow is documented for contributors
-
-Suggested validation/tests:
-
-- run migration upgrade on a fresh database
-- run migration downgrade/upgrade cycle on a scratch database
-
-### 0.3 Define backend package boundaries for parser, persistence, and analysis
-
-Status:
-
-- `pass`
-
-Work:
-
-- make sure backend modules map cleanly to parser, persistence, analysis, merge planning, and export
-- remove or mark any misleading placeholder code that implies unsupported behavior
-
-PASS validation:
-
-- module boundaries are reflected in code layout
-- placeholder behavior is explicitly marked as placeholder
-- no route handlers contain embedded config-semantic logic
-
-Suggested validation/tests:
-
-- code review against `AGENTS.md`
-- import/syntax test for backend modules
-
-## Phase 1: Project And Source Management
+Status: Complete
 
 Goal:
 
-- make projects and source XML imports real, persistent, and auditable
+Establish the new offline-first Python desktop foundation and remove the hosted
+web application direction.
 
-Status:
+Completed scope:
 
-- `pass`
+- Python package structure under `frying_pan/`.
+- PySide6 desktop app shell.
+- Main navigation placeholders.
+- CLI skeleton.
+- Local project workspace model.
+- Source import model.
+- Source detection skeleton.
+- Normalized model skeleton.
+- SQLite cache/index foundation.
+- Policy match/audit/assurance module skeletons.
+- Modify/Migrate/Convert plan model skeletons.
+- README and AGENTS.md updated for the desktop direction.
 
-Tasks:
+Validation evidence:
 
-### 1.1 Implement PostgreSQL-backed project records
+- `pytest` passed with 14 tests.
+- `ruff check .` passed.
+- Offscreen GUI construction passed and produced `Frying-PAN 9`.
+- CLI detection worked against the Panorama fixture.
 
-Status:
+## Phase 1: PAN-OS Inventory Analyzer
 
-- `pass`
+Status: Active
 
-Work:
+Detail:
 
-- create `projects` table and model
-- support project create/list/detail flows
-- persist project metadata in PostgreSQL
-
-PASS validation:
-
-- projects can be created and retrieved persistently
-- project IDs remain stable across restarts
-- project API responses match expected schema
-
-Suggested validation/tests:
-
-- API test for create/list/detail
-- database verification of inserted project rows
-
-### 1.2 Implement source import records and raw file storage
-
-Status:
-
-- `pass`
-
-Work:
-
-- create `sources` table and model
-- store raw uploaded XML on disk
-- create source rows with filename, checksum, storage path, and parse status
-
-PASS validation:
-
-- uploaded XML is written to disk
-- source metadata is written to PostgreSQL
-- duplicate upload handling is defined and behaves consistently
-
-Suggested validation/tests:
-
-- upload API test with a real XML file
-- checksum verification test
-- file existence check on storage path
-
-### 1.3 Add project/source audit trail
-
-Status:
-
-- `pass`
-
-Work:
-
-- record meaningful events for project creation and source upload
-- tie events to project scope
-
-PASS validation:
-
-- project create and source import actions generate auditable event records
-- event history can be retrieved for a project
-
-Suggested validation/tests:
-
-- API or service test for event creation
-- DB verification of expected event rows
-
-## Phase 2: Scope Discovery And Canonical Inventory
+- [docs/phases/phase-1.md](../phases/phase-1.md)
 
 Goal:
 
-- parse imported XML into canonical scope and object inventory records
+Import a Panorama or standalone Palo Alto firewall XML file, detect what it is,
+parse common PAN-OS objects/rules into normalized entities, extract
+references/dependencies, expose inventory through CLI, and surface basic
+inventory results in the GUI.
 
-Status:
+Phase 1 must not enable XML mutation/export. Markdown and HTML inventory
+reports are allowed as early export artifacts.
 
-- `pass`
+## Phase 2: Policy Tester v1
 
-Tasks:
-
-### 2.1 Parse scope hierarchy from Panorama XML
-
-Status:
-
-- `pass`
-
-Work:
-
-- parse `shared`
-- parse device groups
-- parse nested device groups
-- capture parent-child relationships using Panorama metadata
-- persist `scopes`
-
-PASS validation:
-
-- `Example-1.xml` produces expected scope records
-- child DG parent linkage is captured correctly
-- scope paths are stable and human-readable
-
-Suggested validation/tests:
-
-- parser unit test using `Example-1.xml`
-- DB row count and content verification for discovered scopes
-
-### 2.2 Parse v1 object types into canonical records
-
-Status:
-
-- `pass`
-
-Work:
-
-- parse address objects
-- parse address groups
-- parse services
-- parse service groups
-- parse tags
-- persist `objects` using raw and normalized payloads
-
-PASS validation:
-
-- `Example-1.xml` produces the expected v1 object inventory
-- object identity includes source, scope, object type, and name
-- canonical payloads are stored without mutating source semantics
-
-Suggested validation/tests:
-
-- parser unit tests by object type
-- fixture-based inventory comparison using `Example-1.xml`
-- database verification of inserted object rows
-
-### 2.3 Track parse warnings and unsupported object types cleanly
-
-Status:
-
-- `pass`
-
-Work:
-
-- record unsupported sections without crashing the import
-- capture warnings for future work
-
-PASS validation:
-
-- unsupported sections do not abort the full import
-- warnings are recorded in a queryable form
-- imports can complete in a partial-but-honest state
-
-Suggested validation/tests:
-
-- import test with known unsupported content
-- validation that warnings are persisted or returned consistently
-
-## Phase 3: Reference Graph And Resolution
+Status: Planned
 
 Goal:
 
-- build the dependency graph needed for safe comparison and transformation
+Evaluate a single user-provided flow against normalized policy data with
+first-match behavior, trace output, later matching rules, and warnings for
+unsupported or uncertain offline behavior.
 
-Status:
+## Phase 3: Policy Audit v1
 
-- `pass`
-
-Tasks:
-
-### 3.1 Extract outbound references from v1 object types
-
-Status:
-
-- `pass`
-
-Work:
-
-- parse group member references
-- identify builtin references where applicable
-- persist `references`
-
-PASS validation:
-
-- address-group and service-group references from `Example-1.xml` are captured
-- builtin references are distinguished from imported object references
-
-Suggested validation/tests:
-
-- parser unit tests for `DG1-Group`, `Nested-Groups`, and `Shared-Service-Group`
-- database verification of expected reference rows
-
-### 3.2 Implement scope-aware reference resolution
-
-Status:
-
-- `pass`
-
-Work:
-
-- resolve in local DG first
-- resolve through ancestor DG hierarchy
-- resolve through `shared`
-- resolve builtin namespaces
-- mark unresolved and ambiguous references explicitly
-
-PASS validation:
-
-- local references resolve correctly
-- ancestor/shared references resolve correctly
-- unresolved references remain explicit
-
-Suggested validation/tests:
-
-- resolver unit tests using `Example-1.xml`
-- targeted tests for local, ancestor, shared, builtin, and unresolved cases
-
-### 3.3 Model precedence behavior as configuration, not parser magic
-
-Status:
-
-- `pass`
-
-Work:
-
-- define where precedence settings live
-- ensure resolution logic can account for project/source precedence configuration
-
-PASS validation:
-
-- precedence behavior is externally configurable
-- parser output does not hide precedence assumptions
-
-Suggested validation/tests:
-
-- resolver configuration tests
-- review that precedence-sensitive behavior is isolated to resolution logic
-
-## Phase 4: Analysis And Comparison
+Status: Planned
 
 Goal:
 
-- provide useful analysis outputs before any write-back or merge operations
+Analyze a full rulebase for structured findings such as obvious full shadows,
+duplicate rules, broad allows, missing object references, App-ID gaps, and
+service/application uncertainty.
 
-Status:
+## Phase 4: Dedupe and Conflict Analysis
 
-- `pass`
-
-Tasks:
-
-### 4.1 Duplicate analysis by name and value
-
-Status:
-
-- `pass`
-
-Work:
-
-- implement duplicate-by-name analysis
-- implement duplicate-by-normalized-value analysis
-- support filtering by scope, source, and object type
-
-PASS validation:
-
-- duplicate reports identify expected objects in `Example-1.xml`
-- analysis output clearly distinguishes same-name vs same-value findings
-
-Suggested validation/tests:
-
-- analysis tests for duplicate name findings
-- analysis tests for duplicate normalized value findings
-- API tests for filter behavior
-
-### 4.2 Normalization suggestion analysis
-
-Status:
-
-- `pass`
-
-Work:
-
-- detect likely IPv4 host to `/32` suggestions
-- detect likely IPv6 host to `/128` suggestions
-- keep suggestions separate from applied changes
-
-PASS validation:
-
-- likely normalization candidates are surfaced
-- no source data is silently rewritten during analysis
-
-Suggested validation/tests:
-
-- analysis test for `172.16.1.1` style suggestions
-- regression test proving analysis does not mutate canonical stored values
-
-### 4.3 Promotion candidate and blocker analysis
-
-Status:
-
-- `pass`
-
-Work:
-
-- identify objects that may be promotable to `shared`
-- identify dependency blockers and collisions
-- surface mixed-scope dependencies
-
-PASS validation:
-
-- candidate report includes both promotable items and blockers
-- dependency-related blockers are visible and explainable
-
-Suggested validation/tests:
-
-- analysis tests for mixed-scope dependency chains
-- API tests for promotion candidate reporting
-
-## Phase 5: Change Sets And Transformation Preview
+Status: Planned
 
 Goal:
 
-- let users stage backend-planned changes without applying them blindly
+Detect object and service duplicates, same-name/different-value conflicts,
+different-name/same-value candidates, unused objects, and initial object
+placement recommendations.
 
-Status:
+## Phase 5: Modify Plan
 
-- `pass`
-
-Tasks:
-
-### 5.1 Implement `change_sets` persistence and status flow
-
-Status:
-
-- `pass`
-
-Work:
-
-- create `change_sets` table and model
-- support draft/preview/apply lifecycle states
-
-PASS validation:
-
-- change sets can be created and retrieved
-- state transitions are explicit and validated
-
-Suggested validation/tests:
-
-- API/service tests for create/read/status transition
-- DB verification of lifecycle state changes
-
-### 5.2 Build promote-to-shared preview planning
-
-Status:
-
-- `pass`
-
-Work:
-
-- given selected objects, compute required object moves/promotions
-- compute reference rewrites needed to keep the result valid
-- record blockers instead of forcing unsafe plans
-
-PASS validation:
-
-- preview output includes planned object actions and reference rewrites
-- unsafe plans are blocked with explicit reasons
-
-Suggested validation/tests:
-
-- planner unit tests on sample object graphs
-- integration test using `Example-1.xml`-derived records
-
-### 5.3 Add user-approved normalization changes to change-set planning
-
-Status:
-
-- `pass`
-
-Work:
-
-- allow user-selected normalization suggestions to become planned changes
-- keep change preview explicit and reviewable
-
-PASS validation:
-
-- normalization changes only appear after explicit user selection
-- preview distinguishes normalization from promotion/rewrite actions
-
-Suggested validation/tests:
-
-- planner tests for selected vs unselected suggestions
-- API tests for change-set preview payload
-
-## Phase 6: Apply Engine
+Status: Planned
 
 Goal:
 
-- safely apply reviewed changes to working project state
+Stage single-configuration modification actions such as dedupe, rename, object
+move, and rule reorder decisions. Generate modification reports. Do not export
+mutated XML until serializer validation exists.
 
-Status:
+## Phase 6: Migrate Plan
 
-- `pass`
-
-Tasks:
-
-### 6.1 Define working-state mutation model
-
-Status:
-
-- `pass`
-
-Work:
-
-- decide how imported state and applied working state coexist
-- ensure imported source data remains traceable and effectively immutable
-
-PASS validation:
-
-- applied changes do not destroy source provenance
-- working-state model is documented and testable
-
-Suggested validation/tests:
-
-- architecture review against design doc
-- service tests for immutable source preservation
-
-### 6.2 Apply promote-to-shared and reference rewrite operations transactionally
-
-Status:
-
-- `pass`
-
-Work:
-
-- execute planned operations in a transaction
-- update working objects and references consistently
-- fail safely on invalid apply attempts
-
-PASS validation:
-
-- apply succeeds atomically for valid plans
-- failed apply attempts leave state unchanged
-- rewritten references are internally consistent after apply
-
-Suggested validation/tests:
-
-- transactional integration tests
-- rollback tests with intentionally invalid operations
-- post-apply graph consistency checks
-
-## Phase 7: Export
+Status: Planned
 
 Goal:
 
-- generate XML output from transformed canonical state
+Stage migration decisions between Palo Alto sources and targets, including
+scope mapping, object mapping, zone mapping, rule placement, dependency
+inclusion, and policy assurance before export.
 
-Status:
+## Phase 7: Convert Framework
 
-- `pass`
-
-Tasks:
-
-### 7.1 Define export model and serialization boundary
-
-Status:
-
-- `pass`
-
-Work:
-
-- define how canonical state maps back to XML structures
-- define how builtin and untouched imported elements are handled
-
-PASS validation:
-
-- export strategy is explicit and documented
-- serialization boundaries do not depend on ad hoc text replacement
-
-Suggested validation/tests:
-
-- design review against locked export direction
-- serializer unit tests for v1 object types
-
-### 7.2 Generate v1 export for supported object types
-
-Status:
-
-- `pass`
-
-Work:
-
-- serialize supported v1 object types from canonical/project working state
-- produce export file records and storage entries
-
-PASS validation:
-
-- exported XML is well-formed
-- exported v1 objects reflect applied project state
-- export artifacts are stored and traceable to a project/change set
-
-Suggested validation/tests:
-
-- XML well-formedness validation
-- fixture comparison tests for serialized output
-- export record and file existence checks
-
-## Phase 8: Frontend Workbench Integration
+Status: Planned
 
 Goal:
 
-- expose project, import, analysis, and change workflows in the web UI
-
-Status:
-
-- `pass`
-
-Tasks:
-
-### 8.1 Project and source management UI
-
-Status:
-
-- `pass`
-
-Work:
-
-- project creation/list/detail views
-- source upload UI
-- source inventory visibility
-
-PASS validation:
-
-- users can create a project and upload XML from the UI
-- UI reflects backend truth for project and source state
-
-Suggested validation/tests:
-
-- frontend integration tests
-- manual end-to-end smoke test through the browser
-
-### 8.2 Analysis and comparison UI
-
-Status:
-
-- `pass`
-
-Work:
-
-- duplicate views
-- normalization suggestion views
-- promotion candidate/blocker views
-
-PASS validation:
-
-- users can inspect analysis results without hidden backend assumptions
-- filters and comparison output are understandable and consistent
-
-Suggested validation/tests:
-
-- UI integration tests for filters and result rendering
-- manual validation against `Example-1.xml` findings
-
-### 8.3 Change preview and apply UI
-
-Status:
-
-- `pass`
-
-Work:
-
-- change-set creation and review screens
-- preview of planned rewrites
-- apply flow and status feedback
-
-PASS validation:
-
-- users can review changes before apply
-- apply status and failure reasons are visible in the UI
-
-Suggested validation/tests:
-
-- UI integration tests for preview/apply flow
-- manual end-to-end test against a sample project
-
-## Phase 9: Multi-User App Layer
-
-Goal:
-
-- add application-level identity and access control without polluting workbench semantics
-
-Status:
-
-- `pass`
-
-Tasks:
-
-### 9.1 Users, organizations, and memberships
-
-Status:
-
-- `pass`
-
-Work:
-
-- implement `users`
-- implement `organizations`
-- implement organization and project memberships
-
-PASS validation:
-
-- user and membership records persist correctly
-- project access can be restricted by membership
-
-Suggested validation/tests:
-
-- backend tests for membership rules
-- authorization tests for project access boundaries
-
-### 9.2 Authentication and session flow
-
-Status:
-
-- `pass`
-
-Work:
-
-- add chosen auth/session approach
-- keep auth concerns in the app layer only
-
-PASS validation:
-
-- authenticated access works for protected project routes
-- unauthenticated or unauthorized access is rejected correctly
-
-Suggested validation/tests:
-
-- auth integration tests
-- session lifecycle tests
-
-### 9.3 Audit expansion for multi-user changes
-
-Status:
-
-- `pass`
-
-Work:
-
-- record actor-aware events for analysis, change-set creation, and apply/export actions
-
-PASS validation:
-
-- significant actions can be attributed to a user
-- audit history is queryable per project
-
-Suggested validation/tests:
-
-- audit trail tests for user-attributed actions
-
-## Phase 10: WebUI Refactor
-
-Goal:
-
-- simplify the operator-facing entry flow so authentication, admin access, and the workbench appear in the right places
-
-Status:
-
-- `in_progress`
-
-Tasks:
-
-### 10.1 Refactor the landing page into a login-only portal
-
-Status:
-
-- `pass`
-
-Work:
-
-- remove pre-auth cards or labels that expose backend state, project state, session state, or roadmap phase status
-- make the landing page primarily about authentication
-- keep backend/auth failures visible as inline, operator-friendly errors
-
-PASS validation:
-
-- unauthenticated users see a clean login portal rather than a partial workbench
-- no pre-auth UI depends on project state or roadmap state to make sense
-- backend unavailability or auth failure is communicated clearly from the login experience
-
-Suggested validation/tests:
-
-- frontend integration tests for unauthenticated routing
-- manual browser validation of the unauthenticated landing page
-
-### 10.2 Replace public registration with local username-based authentication
-
-Status:
-
-- `pass`
-
-Work:
-
-- remove public self-registration from the initial landing page
-- switch login UX and backend auth flow to local username/password
-- preserve session-cookie auth after successful login
-
-PASS validation:
-
-- users authenticate with local usernames instead of email-first registration
-- no public self-registration path remains on the landing page
-- authenticated sessions still protect the workbench correctly
-
-Suggested validation/tests:
-
-- backend auth integration tests for username login
-- frontend integration tests for login success and failure handling
-
-### 10.3 Seed a bootstrap administrator and first-login password change flow
-
-Status:
-
-- `pass`
-
-Work:
-
-- seed a default bootstrap admin account named `chef`
-- require password setup/change on first login for the bootstrap account
-- avoid blank-password bootstrap behavior
-
-PASS validation:
-
-- a fresh deployment contains the expected bootstrap admin account
-- the bootstrap admin cannot continue using the temporary password indefinitely
-- first-login password change flow is enforced and testable
-
-Suggested validation/tests:
-
-- migration or startup seeding test
-- backend tests for first-login password-change enforcement
-- manual login validation on a fresh environment
-
-### 10.4 Add an admin-only local user management path
-
-Status:
-
-- `pass`
-
-Work:
-
-- provide an admin-only UI and backend path for creating and managing local users
-- keep local user administration separate from Panorama project semantics
-- restrict admin controls to administrator accounts only
-
-PASS validation:
-
-- admins can create and manage local users
-- non-admin users cannot access admin-only routes or screens
-- user-management actions are auditable
-
-Suggested validation/tests:
-
-- authorization tests for admin-only routes
-- UI validation for admin vs non-admin navigation visibility
-- audit/event tests for user-management actions
-
-### 10.5 Restore the workbench as the post-login application surface
-
-Status:
-
-- `pass`
-
-Work:
-
-- show the real workbench after successful authentication
-- remove roadmap/phase language from the product UI
-- ensure authenticated users land in the actual project workflow area
-
-PASS validation:
-
-- authenticated users land in the workbench, not a marketing or scaffold screen
-- project and workflow UI appears only when it is actually actionable
-- product UI language reflects operator tasks rather than implementation-phase tracking
-
-Suggested validation/tests:
-
-- authenticated routing tests
-- manual end-to-end browser validation after login
-
-Notes:
-
-- this phase must remain open until the user explicitly confirms the WebUI refactor is acceptable
-- tasks may be added, revised, or re-opened during design discussion and implementation
-
-## Phase 11: Hardening And Scale Validation
-
-Goal:
-
-- prove the system remains honest and usable as volume and complexity grow
-
-Status:
-
-- `todo`
-
-Tasks:
-
-### 11.1 Performance and indexing review
-
-Work:
-
-- review query patterns
-- add or refine indexes
-- validate import and analysis performance at meaningful scale
-
-PASS validation:
-
-- representative imports and analyses complete within acceptable thresholds
-- index choices are justified by observed query behavior
-
-Suggested validation/tests:
-
-- import timing benchmarks
-- analysis timing benchmarks
-- query plan review for critical filters and lookups
-
-### 11.2 Larger fixture and regression suite
-
-Work:
-
-- add more realistic Panorama fixtures
-- add regression tests for parser, resolver, planner, and exporter behavior
-
-PASS validation:
-
-- regressions in import, resolution, planning, and export are caught by automated tests
-- sample coverage extends beyond `Example-1.xml`
-
-Suggested validation/tests:
-
-- expanded automated test suite
-- fixture-driven regression runs in CI
-
-### 11.3 Deployment and operational validation
-
-Work:
-
-- validate Docker Compose deployment path
-- document operational requirements for PostgreSQL and storage
-
-PASS validation:
-
-- application stack boots reliably with documented dependencies
-- deployment docs reflect the real runtime architecture
-
-Suggested validation/tests:
-
-- docker compose smoke test
-- startup/shutdown persistence test
-- documented operator checklist review
-
-## Cross-Phase Rules
-
-- no phase should silently change locked design decisions without first updating `docs/devel/design.md`
-- every completed task should leave behind automated validation where practical
-- manual validation is acceptable for early scaffolding, but critical parser, resolver, planner, and exporter logic should gain automated tests as soon as possible
-- frontend work must consume backend semantics, not recreate them
-- change application logic must remain backend-owned and transactional
+Define normalized import package structure and conversion warning models so
+future FortiGate, ASA, CSV, JSON, or other vendor adapters can feed Modify or
+Migrate workflows without directly mutating Panorama XML.
+
+## Completion Rules
+
+A Phase may only be marked complete when:
+
+- every Task in that Phase is complete
+- every Task has validation evidence
+- the full phase validation suite passes
+- documentation has been updated to reflect the implemented behavior
+- no known blocking issues remain untracked
+
+A Task may only be marked complete when:
+
+- the implementation for that Task is complete
+- task-specific validation has passed
+- related tests have been added or updated
+- documentation has been updated where applicable
+- limitations or deferred work are explicitly recorded
+
+Never mark work complete based only on code changes.
+
+## Validation Rules
+
+Use validation evidence appropriate to the Task or Phase, such as:
+
+- `pytest` results
+- `ruff check .` results
+- CLI command output
+- GUI/offscreen construction validation
+- parser fixture validation
+- report generation validation
+- documentation update confirmation
+
+If validation cannot be performed, leave the Task as `blocked` or
+`in-progress` and document why.
+
+## Architecture Guardrails
+
+- Keep GUI code thin and workflow-focused.
+- Keep parsing, normalization, policy logic, dependency analysis, and plan
+  behavior in GUI-independent Python modules.
+- Treat raw XML as an import/export boundary, not the internal model.
+- Keep SQLite local to portable project workspaces.
+- Do not reintroduce hosted web infrastructure without explicit owner request.
+- Do not mutate source XML during import, drag/drop, mapping, or plan staging.
+- Do not claim production-safe XML export until serializer tests exist.
+- Use official Palo Alto Networks documentation for PAN-OS behavior whenever
+  practical.
+- Emit warnings for uncertain policy behavior instead of silently guessing.

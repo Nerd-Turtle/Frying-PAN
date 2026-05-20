@@ -1,0 +1,18 @@
+<config version="11.1.0">
+  <shared>
+    <address />
+  </shared>
+  <devices>
+    <entry name="localhost.localdomain">
+      <device-group>
+        <entry name="DG-A" />
+      </device-group>
+      <template>
+        <entry name="TPL-A" />
+      </template>
+      <template-stack>
+        <entry name="STACK-A" />
+      </template-stack>
+    </entry>
+  </devices>
+</config>

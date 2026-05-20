@@ -2,26 +2,20 @@
 .venv/
 __pycache__/
 *.pyc
+*.egg-info/
+.eggs/
+build/
+dist/
 .pytest_cache/
 .mypy_cache/
 .coverage
 coverage.xml
 htmlcov/
 .ruff_cache/
-backend/.pytest_cache/
-backend/htmlcov/
-backend/.coverage
-backend/test-results/
-frontend/test-results/
 
-frontend/node_modules/
-frontend/.next/
+*.log
+*.sqlite
+*.sqlite3
 
 Example-1.xml
-
-storage/uploads/*
-!storage/uploads/.gitkeep
-storage/projects/*
-!storage/projects/.gitkeep
-storage/exports/*
-!storage/exports/.gitkeep
+Frying-PAN-Project/

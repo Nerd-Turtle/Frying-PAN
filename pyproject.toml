@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "frying-pan"
+version = "0.1.0"
+description = "Offline desktop workbench for Panorama / PAN-OS configuration analysis and planning."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Proprietary" }
+authors = [{ name = "Frying-PAN contributors" }]
+dependencies = [
+  "lxml>=5.2",
+  "pydantic>=2.7",
+  "PySide6>=6.7",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2",
+  "ruff>=0.5",
+]
+
+[project.scripts]
+frying-pan = "frying_pan.cli.main:main"
+frying-pan-gui = "frying_pan.app:main"
+
+[tool.setuptools.packages.find]
+include = ["frying_pan*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.format]
+quote-style = "double"
