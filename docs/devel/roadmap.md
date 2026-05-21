@@ -28,12 +28,14 @@ changes direction.
 
 Phase 0/Foundation is complete based on the validation performed during the
 foundation rebuild. Phase 1, PAN-OS Inventory Analyzer, is complete based on the
-validation recorded in the phase document.
+validation recorded in the phase document. Phase 2, Policy Tester v1, is
+complete based on the validation recorded in the phase document.
 
 The project currently has a desktop shell, CLI inventory commands, local
 workspace model, source detection, Phase 1 PAN-OS inventory parsers, normalized
-models, reference/dependency foundations, report generation, plan model
-skeletons, and tests. XML mutation/export remains blocked.
+models, reference/dependency foundations, report generation, conservative
+single-flow policy testing, plan model skeletons, and tests. XML mutation/export
+remains blocked.
 
 ## Phase and Task Model
 
@@ -57,12 +59,12 @@ documentation updates are complete.
 |---|---|---|---|---|
 | 0 | Foundation | Complete | [design.md](design.md) | Establish the offline desktop architecture, package skeleton, GUI shell, CLI skeleton, workspace model, and baseline checks. |
 | 1 | PAN-OS Inventory Analyzer | Complete | [phase-1.md](../phases/phase-1.md) | Parse Panorama and standalone firewall XML into normalized inventory, dependencies, CLI output, GUI visibility, and reports. |
-| 2 | Policy Tester v1 | Planned | TBD | Evaluate a single test flow with conservative first-match behavior, trace output, later matches, and warnings. |
-| 3 | Policy Audit v1 | Planned | TBD | Analyze full rulebases for obvious shadows, duplicate rules, broad allows, missing references, and App-ID/service uncertainty. |
-| 4 | Dedupe and Conflict Analysis | Planned | TBD | Detect duplicate objects/services, same-name conflicts, unused candidates, and object placement recommendations. |
-| 5 | Modify Plan | Planned | TBD | Stage object/rule modification decisions and generate modification reports without mutating XML. |
-| 6 | Migrate Plan | Planned | TBD | Stage source-to-target scope, object, zone, and rule mappings with dependency inclusion and policy assurance. |
-| 7 | Convert Framework | Planned | TBD | Define normalized import packages, conversion warnings, and future vendor adapters. |
+| 2 | Policy Tester v1 | Complete | [phase-2.md](../phases/phase-2.md) | Evaluate a single test flow with conservative first-match behavior, trace output, later matches, and warnings. |
+| 3 | Policy Audit v1 | Planned | [phase-3.md](../phases/phase-3.md) | Analyze full rulebases for obvious shadows, duplicate rules, broad allows, missing references, and App-ID/service uncertainty. |
+| 4 | Dedupe and Conflict Analysis | Planned | [phase-4.md](../phases/phase-4.md) | Detect duplicate objects/services, same-name conflicts, unused candidates, and object placement recommendations. |
+| 5 | Modify Plan | Planned | [phase-5.md](../phases/phase-5.md) | Stage object/rule modification decisions and generate modification reports without mutating XML. |
+| 6 | Migrate Plan | Planned | [phase-6.md](../phases/phase-6.md) | Stage source-to-target scope, object, zone, and rule mappings with dependency inclusion and policy assurance. |
+| 7 | Convert Framework | Planned | [phase-7.md](../phases/phase-7.md) | Define normalized import packages, conversion warnings, and future vendor adapters. |
 
 ## Phase 0: Foundation
 
@@ -129,7 +131,11 @@ Validation evidence is recorded in
 
 ## Phase 2: Policy Tester v1
 
-Status: Planned
+Status: Complete
+
+Detail:
+
+- [docs/phases/phase-2.md](../phases/phase-2.md)
 
 Goal:
 
@@ -137,9 +143,28 @@ Evaluate a single user-provided flow against normalized policy data with
 first-match behavior, trace output, later matching rules, and warnings for
 unsupported or uncertain offline behavior.
 
+Completed scope:
+
+- Shared `PolicyTestCase` flow model for CLI, GUI, tests, and engine use.
+- Conservative scope/rulebase selection for standalone firewall and Panorama
+  Device Group imports.
+- Address, address group, zone, service, service group, application, URL
+  category, user, and HIP limitation handling.
+- Structured first-match trace output with later matching rules and warnings.
+- CLI `policy-test` command with text, JSON, and Markdown report output.
+- Policy Tester GUI result and trace display backed by core models.
+- Policy tester behavior notes with official Palo Alto Networks references.
+
+Validation evidence is recorded in
+[docs/phases/phase-2.md](../phases/phase-2.md).
+
 ## Phase 3: Policy Audit v1
 
 Status: Planned
+
+Detail:
+
+- [docs/phases/phase-3.md](../phases/phase-3.md)
 
 Goal:
 
@@ -151,6 +176,10 @@ service/application uncertainty.
 
 Status: Planned
 
+Detail:
+
+- [docs/phases/phase-4.md](../phases/phase-4.md)
+
 Goal:
 
 Detect object and service duplicates, same-name/different-value conflicts,
@@ -160,6 +189,10 @@ placement recommendations.
 ## Phase 5: Modify Plan
 
 Status: Planned
+
+Detail:
+
+- [docs/phases/phase-5.md](../phases/phase-5.md)
 
 Goal:
 
@@ -171,6 +204,10 @@ mutated XML until serializer validation exists.
 
 Status: Planned
 
+Detail:
+
+- [docs/phases/phase-6.md](../phases/phase-6.md)
+
 Goal:
 
 Stage migration decisions between Palo Alto sources and targets, including
@@ -180,6 +217,10 @@ inclusion, and policy assurance before export.
 ## Phase 7: Convert Framework
 
 Status: Planned
+
+Detail:
+
+- [docs/phases/phase-7.md](../phases/phase-7.md)
 
 Goal:
 

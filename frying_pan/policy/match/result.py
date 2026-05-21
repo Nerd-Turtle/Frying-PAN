@@ -12,3 +12,5 @@ class PolicyMatchResult(BaseModel):
     trace: list[MatchTraceStep] = Field(default_factory=list)
     later_matching_rules: list[SecurityRule] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+    scope_path: str | None = None
+    evaluated_rule_count: int = 0

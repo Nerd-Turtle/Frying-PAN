@@ -5,7 +5,10 @@ import sys
 from pathlib import Path
 
 from frying_pan.analysis.inventory import summarize_inventory
+from frying_pan.export.policy_test_exporter import export_policy_test_markdown
 from frying_pan.export.report_exporter import export_inventory_markdown
+from frying_pan.policy.match.match_engine import PolicyMatchEngine
+from frying_pan.policy.match.test_case import PolicyTestCase
 from frying_pan.sources.detection import detect_source
 from frying_pan.sources.parsing import SourceParseError, parse_source
 from frying_pan.storage.workspace import ProjectWorkspace
@@ -36,6 +39,28 @@ def build_parser() -> argparse.ArgumentParser:
     import_parser = subparsers.add_parser("import-source", help="Import a source into a workspace.")
     import_parser.add_argument("workspace", type=Path)
     import_parser.add_argument("source", type=Path)
+
+    policy_test_parser = subparsers.add_parser(
+        "policy-test", help="Evaluate one test flow against imported security policy."
+    )
+    policy_test_parser.add_argument("source", type=Path)
+    policy_test_parser.add_argument("--scope", help="Scope path, such as vsys/vsys1.")
+    policy_test_parser.add_argument("--src-zone", required=True)
+    policy_test_parser.add_argument("--dst-zone", required=True)
+    policy_test_parser.add_argument("--src-ip", required=True)
+    policy_test_parser.add_argument("--dst-ip", required=True)
+    policy_test_parser.add_argument("--protocol", required=True)
+    policy_test_parser.add_argument("--dst-port", type=int)
+    policy_test_parser.add_argument("--src-port", type=int)
+    policy_test_parser.add_argument("--application", default="any")
+    policy_test_parser.add_argument("--user", default="any")
+    policy_test_parser.add_argument("--url-category")
+    policy_test_parser.add_argument(
+        "--json", action="store_true", help="Print JSON policy test result."
+    )
+    policy_test_parser.add_argument(
+        "--report-md", type=Path, help="Write a Markdown result report."
+    )
 
     return parser
 
@@ -77,6 +102,35 @@ def main(argv: list[str] | None = None) -> int:
         print(source.model_dump_json(indent=2))
         return 0
 
+    if args.command == "policy-test":
+        try:
+            config = parse_source(args.source)
+            test_case = PolicyTestCase(
+                source_zone=args.src_zone,
+                destination_zone=args.dst_zone,
+                source_ip=args.src_ip,
+                destination_ip=args.dst_ip,
+                protocol=args.protocol,
+                destination_port=args.dst_port,
+                source_port=args.src_port,
+                application=args.application,
+                user=args.user,
+                url_category=args.url_category,
+            )
+        except (SourceParseError, ValueError) as exc:
+            print(exc, file=sys.stderr)
+            return 1
+        result = PolicyMatchEngine().evaluate_config(config, test_case, args.scope)
+        if args.report_md:
+            export_policy_test_markdown(test_case, result, args.report_md)
+        if args.json:
+            print(result.model_dump_json(indent=2))
+        else:
+            print(_format_policy_test_result(result))
+            if args.report_md:
+                print(f"Markdown report written to {args.report_md}")
+        return 0
+
     parser.error("unknown command")
     return 2
 
@@ -94,6 +148,20 @@ def _format_inventory_summary(summary) -> str:
             f"Warnings: {summary.warning_count}",
         ]
     )
+
+
+def _format_policy_test_result(result) -> str:
+    matched_rule = result.matched_rule.name if result.matched_rule else "None"
+    lines = [
+        "Frying-PAN Policy Test Result",
+        f"Scope: {result.scope_path or 'direct rule list'}",
+        f"Matched rule: {matched_rule}",
+        f"Action: {result.action}",
+        f"Evaluated rules: {result.evaluated_rule_count}",
+        f"Later matching rules: {len(result.later_matching_rules)}",
+        f"Warnings: {len(result.warnings)}",
+    ]
+    return "\n".join(lines)
 
 
 if __name__ == "__main__":
