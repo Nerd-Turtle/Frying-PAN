@@ -111,3 +111,25 @@ def test_cli_policy_audit_json_and_markdown_report(tmp_path: Path, capsys) -> No
     assert '"finding_count"' in captured.out
     assert "DISABLED_RULE" in captured.out
     assert "Frying-PAN Policy Audit Report" in report_path.read_text(encoding="utf-8")
+
+
+def test_cli_dedupe_analysis_json_and_markdown_report(tmp_path: Path, capsys) -> None:
+    report_path = tmp_path / "dedupe.md"
+    result = main(
+        [
+            "dedupe-analysis",
+            str(FIXTURES / "panorama" / "reference_config_items.xml"),
+            "--json",
+            "--report-md",
+            str(report_path),
+        ]
+    )
+
+    captured = capsys.readouterr()
+
+    assert result == 0
+    assert '"finding_count"' in captured.out
+    assert "unused_object_candidate" in captured.out
+    assert "Frying-PAN Dedupe And Conflict Analysis" in report_path.read_text(
+        encoding="utf-8"
+    )

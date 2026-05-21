@@ -1,6 +1,6 @@
 # Phase 4: Dedupe And Conflict Analysis
 
-Status: planned
+Status: complete
 
 ## Goal
 
@@ -61,11 +61,29 @@ Use these statuses consistently:
 
 A Task cannot be marked complete unless its validation criteria are satisfied.
 
+## Phase 4 Validation Evidence
+
+- `pytest -q` passed with 65 tests.
+- `ruff check .` passed.
+- CLI dedupe-analysis worked against Panorama and firewall fixtures.
+- Dedupe/conflict GUI/model tests passed offscreen.
+- Dedupe/conflict Markdown export tests passed.
+- `docs/dedupe-conflict-notes.md` was created with official Palo Alto Networks
+  references and current analysis limitations.
+- XML mutation/export remains blocked.
+
 ## Tasks
 
 ### Task 4.1: Dedupe And Conflict Notes
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- `docs/dedupe-conflict-notes.md` created and aligned to implemented analysis
+  behavior.
+- `pytest -q` passed with 65 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -92,7 +110,14 @@ Completion Criteria:
 
 ### Task 4.2: Dedupe Finding Model
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- `DedupeFinding`, `ObjectFingerprint`, and `DedupeAnalysisResult` added.
+- Tests cover model serialization through JSON CLI output and report export.
+- `pytest -q` passed with 65 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -116,7 +141,15 @@ Completion Criteria:
 
 ### Task 4.3: Object Fingerprinting
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Stable fingerprints implemented for address objects/groups, service
+  objects/groups, and tags.
+- Tests cover equivalent address normalization and unsupported warnings.
+- `pytest -q` passed with 65 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -144,7 +177,15 @@ Completion Criteria:
 
 ### Task 4.4: Address Duplicate Detection
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Address duplicate findings implemented for normalized address values and
+  address groups.
+- Tests cover duplicate address object detection and dynamic group warnings.
+- `pytest -q` passed with 65 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -171,7 +212,14 @@ Completion Criteria:
 
 ### Task 4.5: Service Duplicate Detection
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Service object/group fingerprinting and duplicate analysis implemented.
+- Tests cover unsupported service port syntax warnings.
+- `pytest -q` passed with 65 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -198,7 +246,14 @@ Completion Criteria:
 
 ### Task 4.6: Same-Name Conflict Detection
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Same-name/different-value conflict findings implemented across scopes.
+- Tests cover Panorama-style same-name conflict context.
+- `pytest -q` passed with 65 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -227,7 +282,15 @@ Completion Criteria:
 
 ### Task 4.7: Unused Object Candidate Detection
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Unused candidate findings implemented from parsed reference/dependency
+  records.
+- Tests cover referenced and unreferenced objects plus parser coverage warnings.
+- `pytest -q` passed with 65 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -252,7 +315,15 @@ Completion Criteria:
 
 ### Task 4.8: Scope Placement Recommendations
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Advisory placement recommendations implemented for duplicate values in
+  multiple non-shared scopes.
+- Tests cover shared-placement review candidates.
+- `pytest -q` passed with 65 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -278,7 +349,16 @@ Completion Criteria:
 
 ### Task 4.9: CLI Dedupe/Conflict Command
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- `frying-pan dedupe-analysis` added with text, JSON, and Markdown report
+  output.
+- CLI worked against Panorama and firewall fixtures.
+- `tests/test_cli_inventory.py` covers JSON and Markdown output.
+- `pytest -q` passed with 65 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -305,7 +385,14 @@ Completion Criteria:
 
 ### Task 4.10: GUI Dedupe And Conflict Display
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Dedupe/Conflict GUI page added with summary, findings table, and detail view.
+- `tests/test_gui_dedupe.py` passed offscreen.
+- `pytest -q` passed with 65 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -331,7 +418,15 @@ Completion Criteria:
 
 ### Task 4.11: Dedupe/Conflict Report Export
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- JSON serialization available through Pydantic result models.
+- Markdown export added in `frying_pan/export/dedupe_report_exporter.py`.
+- `tests/test_dedupe_report_exporter.py` passed.
+- `pytest -q` passed with 65 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -357,7 +452,18 @@ Completion Criteria:
 
 ### Task 4.12: Final Phase 4 Validation
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- `pytest -q` passed with 65 tests.
+- `ruff check .` passed.
+- Existing CLI commands still worked against fixtures during regression
+  validation.
+- `frying-pan dedupe-analysis` worked against Panorama and firewall fixtures.
+- Dedupe/conflict GUI/model and report export tests passed.
+- `docs/dedupe-conflict-notes.md` and roadmap references were updated.
+- No XML mutation/export support was enabled.
 
 Goal:
 

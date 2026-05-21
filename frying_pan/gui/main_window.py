@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QListWidget, QListWidgetItem, QMainWindow, QSplitt
 
 from frying_pan.gui.convert.conversion_workspace import ConversionWorkspace
 from frying_pan.gui.dashboard.dashboard_view import DashboardView
+from frying_pan.gui.dedupe.dedupe_workspace import DedupeWorkspace
 from frying_pan.gui.inventory.inventory_view import InventoryView
 from frying_pan.gui.migrate.migration_workspace import MigrationWorkspace
 from frying_pan.gui.modify.modify_workspace import ModifyWorkspace
@@ -37,6 +38,7 @@ class MainWindow(QMainWindow):
         self._add_page("Convert", ConversionWorkspace())
         self._add_page("Policy Audit", AuditWorkspace())
         self._add_page("Policy Tester", PolicyTesterWorkspace())
+        self._add_page("Dedupe / Conflicts", DedupeWorkspace())
         self._add_page("Reports", ReportView())
         self._add_page(
             "Settings",

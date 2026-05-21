@@ -4,7 +4,9 @@ import argparse
 import sys
 from pathlib import Path
 
+from frying_pan.analysis.dedupe import DedupeAnalysisEngine
 from frying_pan.analysis.inventory import summarize_inventory
+from frying_pan.export.dedupe_report_exporter import export_dedupe_analysis_markdown
 from frying_pan.export.policy_audit_exporter import export_policy_audit_markdown
 from frying_pan.export.policy_test_exporter import export_policy_test_markdown
 from frying_pan.export.report_exporter import export_inventory_markdown
@@ -74,6 +76,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     policy_audit_parser.add_argument(
         "--report-md", type=Path, help="Write a Markdown audit report."
+    )
+
+    dedupe_parser = subparsers.add_parser(
+        "dedupe-analysis", help="Analyze object duplicates, conflicts, and unused candidates."
+    )
+    dedupe_parser.add_argument("source", type=Path)
+    dedupe_parser.add_argument(
+        "--json", action="store_true", help="Print JSON dedupe/conflict analysis result."
+    )
+    dedupe_parser.add_argument(
+        "--report-md", type=Path, help="Write a Markdown dedupe/conflict report."
     )
 
     return parser
@@ -162,6 +175,23 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"Markdown report written to {args.report_md}")
         return 0
 
+    if args.command == "dedupe-analysis":
+        try:
+            config = parse_source(args.source)
+        except SourceParseError as exc:
+            print(exc, file=sys.stderr)
+            return 1
+        result = DedupeAnalysisEngine().analyze(config)
+        if args.report_md:
+            export_dedupe_analysis_markdown(result, args.report_md)
+        if args.json:
+            print(result.model_dump_json(indent=2))
+        else:
+            print(_format_dedupe_analysis_result(result))
+            if args.report_md:
+                print(f"Markdown report written to {args.report_md}")
+        return 0
+
     parser.error("unknown command")
     return 2
 
@@ -201,6 +231,23 @@ def _format_policy_audit_result(result) -> str:
         f"Source type: {result.source_type or 'unknown'}",
         f"Scope: {result.scope_path or 'all audited scopes'}",
         f"Audited rules: {result.audited_rule_count}",
+        f"Findings: {result.finding_count}",
+        f"Warnings: {len(result.warnings)}",
+    ]
+    if result.finding_counts_by_severity:
+        counts = ", ".join(
+            f"{severity}={count}"
+            for severity, count in sorted(result.finding_counts_by_severity.items())
+        )
+        lines.append(f"Severity counts: {counts}")
+    return "\n".join(lines)
+
+
+def _format_dedupe_analysis_result(result) -> str:
+    lines = [
+        "Frying-PAN Dedupe And Conflict Analysis",
+        f"Source type: {result.source_type or 'unknown'}",
+        f"Analyzed objects: {result.analyzed_object_count}",
         f"Findings: {result.finding_count}",
         f"Warnings: {len(result.warnings)}",
     ]

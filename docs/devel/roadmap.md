@@ -31,13 +31,15 @@ foundation rebuild. Phase 1, PAN-OS Inventory Analyzer, is complete based on the
 validation recorded in the phase document. Phase 2, Policy Tester v1, is
 complete based on the validation recorded in the phase document. Phase 3,
 Policy Audit v1, is complete based on the validation recorded in the phase
-document.
+document. Phase 4, Dedupe and Conflict Analysis, is complete based on the
+validation recorded in the phase document.
 
 The project currently has a desktop shell, CLI inventory commands, local
 workspace model, source detection, Phase 1 PAN-OS inventory parsers, normalized
 models, reference/dependency foundations, report generation, conservative
 single-flow policy testing, structured policy audit findings, plan model
-skeletons, and tests. XML mutation/export remains blocked.
+skeletons, dedupe/conflict analysis, and tests. XML mutation/export remains
+blocked.
 
 ## Phase and Task Model
 
@@ -63,7 +65,7 @@ documentation updates are complete.
 | 1 | PAN-OS Inventory Analyzer | Complete | [phase-1.md](../phases/phase-1.md) | Parse Panorama and standalone firewall XML into normalized inventory, dependencies, CLI output, GUI visibility, and reports. |
 | 2 | Policy Tester v1 | Complete | [phase-2.md](../phases/phase-2.md) | Evaluate a single test flow with conservative first-match behavior, trace output, later matches, and warnings. |
 | 3 | Policy Audit v1 | Complete | [phase-3.md](../phases/phase-3.md) | Analyze full rulebases for obvious shadows, duplicate rules, broad allows, missing references, and App-ID/service uncertainty. |
-| 4 | Dedupe and Conflict Analysis | Planned | [phase-4.md](../phases/phase-4.md) | Detect duplicate objects/services, same-name conflicts, unused candidates, and object placement recommendations. |
+| 4 | Dedupe and Conflict Analysis | Complete | [phase-4.md](../phases/phase-4.md) | Detect duplicate objects/services, same-name conflicts, unused candidates, and object placement recommendations. |
 | 5 | Modify Plan | Planned | [phase-5.md](../phases/phase-5.md) | Stage object/rule modification decisions and generate modification reports without mutating XML. |
 | 6 | Migrate Plan | Planned | [phase-6.md](../phases/phase-6.md) | Stage source-to-target scope, object, zone, and rule mappings with dependency inclusion and policy assurance. |
 | 7 | Convert Framework | Planned | [phase-7.md](../phases/phase-7.md) | Define normalized import packages, conversion warnings, and future vendor adapters. |
@@ -194,7 +196,7 @@ Validation evidence is recorded in
 
 ## Phase 4: Dedupe and Conflict Analysis
 
-Status: Planned
+Status: Complete
 
 Detail:
 
@@ -205,6 +207,23 @@ Goal:
 Detect object and service duplicates, same-name/different-value conflicts,
 different-name/same-value candidates, unused objects, and initial object
 placement recommendations.
+
+Completed scope:
+
+- Structured dedupe/conflict finding, fingerprint, and result models.
+- Stable fingerprints for parsed address, address group, service, service
+  group, and tag records.
+- Duplicate object/value candidate findings.
+- Same-name/different-value conflict findings across scopes.
+- Unused object candidate findings from parsed references/dependencies.
+- Advisory placement recommendations for duplicate values in non-shared scopes.
+- CLI `dedupe-analysis` command with text, JSON, and Markdown report output.
+- Dedupe/Conflict GUI summary, findings table, and finding detail display backed
+  by core models.
+- Dedupe/conflict behavior notes with official Palo Alto Networks references.
+
+Validation evidence is recorded in
+[docs/phases/phase-4.md](../phases/phase-4.md).
 
 ## Phase 5: Modify Plan
 
