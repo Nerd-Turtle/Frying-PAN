@@ -27,12 +27,13 @@ changes direction.
 ## Current Status
 
 Phase 0/Foundation is complete based on the validation performed during the
-foundation rebuild. Phase 1, PAN-OS Inventory Analyzer, is the active phase.
+foundation rebuild. Phase 1, PAN-OS Inventory Analyzer, is complete based on the
+validation recorded in the phase document.
 
-The project currently has a desktop shell, CLI skeleton, local workspace model,
-source detection skeleton, normalized model skeleton, plan model skeletons, and
-initial tests. It does not yet have a complete PAN-OS inventory parser or XML
-mutation/export support.
+The project currently has a desktop shell, CLI inventory commands, local
+workspace model, source detection, Phase 1 PAN-OS inventory parsers, normalized
+models, reference/dependency foundations, report generation, plan model
+skeletons, and tests. XML mutation/export remains blocked.
 
 ## Phase and Task Model
 
@@ -55,7 +56,7 @@ documentation updates are complete.
 | Phase | Name | Status | Detail Doc | Goal |
 |---|---|---|---|---|
 | 0 | Foundation | Complete | [design.md](design.md) | Establish the offline desktop architecture, package skeleton, GUI shell, CLI skeleton, workspace model, and baseline checks. |
-| 1 | PAN-OS Inventory Analyzer | Active | [phase-1.md](../phases/phase-1.md) | Parse Panorama and standalone firewall XML into normalized inventory, dependencies, CLI output, GUI visibility, and reports. |
+| 1 | PAN-OS Inventory Analyzer | Complete | [phase-1.md](../phases/phase-1.md) | Parse Panorama and standalone firewall XML into normalized inventory, dependencies, CLI output, GUI visibility, and reports. |
 | 2 | Policy Tester v1 | Planned | TBD | Evaluate a single test flow with conservative first-match behavior, trace output, later matches, and warnings. |
 | 3 | Policy Audit v1 | Planned | TBD | Analyze full rulebases for obvious shadows, duplicate rules, broad allows, missing references, and App-ID/service uncertainty. |
 | 4 | Dedupe and Conflict Analysis | Planned | TBD | Detect duplicate objects/services, same-name conflicts, unused candidates, and object placement recommendations. |
@@ -96,7 +97,7 @@ Validation evidence:
 
 ## Phase 1: PAN-OS Inventory Analyzer
 
-Status: Active
+Status: Complete
 
 Detail:
 
@@ -111,6 +112,20 @@ inventory results in the GUI.
 
 Phase 1 must not enable XML mutation/export. Markdown and HTML inventory
 reports are allowed as early export artifacts.
+
+Completed scope:
+
+- Source detection for Panorama, standalone firewall, unknown PAN-OS, and
+  invalid XML.
+- Panorama and standalone firewall parser foundations for common objects and
+  security rules.
+- Virtual-router and advanced-routing firewall reference fixtures.
+- Normalized inventory, reference, dependency, and report models.
+- CLI inventory summaries, JSON output, and Markdown report export.
+- Basic GUI inventory display backed by core normalized models.
+
+Validation evidence is recorded in
+[docs/phases/phase-1.md](../phases/phase-1.md).
 
 ## Phase 2: Policy Tester v1
 

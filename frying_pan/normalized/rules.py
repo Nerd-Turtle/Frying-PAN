@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from frying_pan.normalized.entity import EntityType, NormalizedEntity
 
@@ -38,6 +38,12 @@ class SecurityRule(NormalizedEntity):
     url_categories: list[str] = Field(default_factory=list)
     action: RuleAction = RuleAction.UNKNOWN
     security_profiles: dict[str, str] = Field(default_factory=dict)
+
+
+class Rulebase(BaseModel):
+    scope_path: str
+    rulebase_type: RulebaseType
+    security_rules: list[SecurityRule] = Field(default_factory=list)
 
 
 class NATRule(NormalizedEntity):

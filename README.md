@@ -29,11 +29,13 @@ Current focus:
 
 - Python 3.12+ desktop app shell with PySide6.
 - Portable local project folders.
-- Source import and source detection scaffolding.
-- Normalized model skeletons for Palo Alto and future vendor imports.
+- Source import and source detection for Panorama and standalone firewall XML.
+- Phase 1 normalized inventory parsing for common PAN-OS objects and security
+  rules.
+- Reference/dependency extraction foundation for inventory reports and future
+  policy workflows.
 - Policy tester, audit, and assurance foundations.
-- CLI entry points so parser and analysis logic can be tested without clicking
-  through the GUI.
+- CLI entry points for detection, inventory summaries, and Markdown reports.
 
 XML export and mutation will be added carefully after parser and serializer
 tests are strong enough to support it.
@@ -102,8 +104,8 @@ Use Python 3.12 or newer.
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev]"
-pytest
-ruff check .
+.venv/bin/python -m pytest
+.venv/bin/python -m ruff check .
 ```
 
 Run the desktop shell:
@@ -115,8 +117,11 @@ frying-pan-gui
 Run the CLI skeleton:
 
 ```bash
-frying-pan detect path/to/source.xml
-frying-pan workspace-create ./Frying-PAN-Project --name "Lab Migration"
+.venv/bin/python -m frying_pan.cli.main detect path/to/source.xml
+.venv/bin/python -m frying_pan.cli.main inventory path/to/source.xml
+.venv/bin/python -m frying_pan.cli.main inventory path/to/source.xml --json
+.venv/bin/python -m frying_pan.cli.main inventory path/to/source.xml --report-md report.md
+.venv/bin/python -m frying_pan.cli.main workspace-create ./Frying-PAN-Project --name "Lab Migration"
 ```
 
 ## Design Principles

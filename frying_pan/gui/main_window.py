@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QListWidget, QListWidgetItem, QMainWindow, QSplitt
 
 from frying_pan.gui.convert.conversion_workspace import ConversionWorkspace
 from frying_pan.gui.dashboard.dashboard_view import DashboardView
+from frying_pan.gui.inventory.inventory_view import InventoryView
 from frying_pan.gui.migrate.migration_workspace import MigrationWorkspace
 from frying_pan.gui.modify.modify_workspace import ModifyWorkspace
 from frying_pan.gui.placeholders import PlaceholderView
@@ -30,6 +31,7 @@ class MainWindow(QMainWindow):
 
         self._add_page("Dashboard", DashboardView())
         self._add_page("Sources", SourceImportView())
+        self._add_page("Inventory", InventoryView())
         self._add_page("Modify", ModifyWorkspace())
         self._add_page("Migrate", MigrationWorkspace())
         self._add_page("Convert", ConversionWorkspace())

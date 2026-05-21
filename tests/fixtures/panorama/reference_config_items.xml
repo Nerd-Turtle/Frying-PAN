@@ -1,0 +1,930 @@
+<config version="11.2.0" urldb="paloaltonetworks" detail-version="11.2.5">
+  <mgt-config>
+    <devices />
+    <users>
+      <entry name="admin">
+        <phash>REDACTED</phash>
+        <permissions>
+          <role-based>
+            <superuser>yes</superuser>
+          </role-based>
+        </permissions>
+      </entry>
+      <entry name="__vm_series">
+        <phash>REDACTED</phash>
+        <permissions>
+          <role-based>
+            <panorama-admin>yes</panorama-admin>
+          </role-based>
+        </permissions>
+      </entry>
+      <entry name="__cloudconnector">
+        <phash>REDACTED</phash>
+        <permissions>
+          <role-based>
+            <panorama-admin>yes</panorama-admin>
+          </role-based>
+        </permissions>
+      </entry>
+      <entry name="__openconfig">
+        <phash>REDACTED</phash>
+        <permissions>
+          <role-based>
+            <panorama-admin>yes</panorama-admin>
+          </role-based>
+        </permissions>
+      </entry>
+    </users>
+    <password-complexity>
+      <enabled>yes</enabled>
+      <minimum-length>8</minimum-length>
+    </password-complexity>
+    <password-profile>
+      <entry name="PASSWORD-PROFILE" />
+    </password-profile>
+    <access-domain>
+      <entry name="ACCESS-DOMAIN">
+        <shared-access>write</shared-access>
+      </entry>
+    </access-domain>
+  </mgt-config>
+  <shared>
+    <tag>
+      <entry name="FP-REF-TAG-INTERNET-EDGE">
+        <color>color1</color>
+        <comments>Reference tag for internet edge objects and rules.</comments>
+      </entry>
+      <entry name="FP-REF-TAG-DMZ">
+        <color>color2</color>
+        <comments>Reference tag for DMZ examples.</comments>
+      </entry>
+      <entry name="FP-REF-TAG-MIGRATION">
+        <color>color3</color>
+        <comments>Reference tag for staged migration examples.</comments>
+      </entry>
+      <entry name="FP-REF-TAG-POLICY-AUDIT">
+        <color>color4</color>
+        <comments>Reference tag for policy audit examples.</comments>
+      </entry>
+      <entry name="FP-REF-TAG-POLICY-ASSURANCE">
+        <color>color5</color>
+        <comments>Reference tag for before/after assurance examples.</comments>
+      </entry>
+      <entry name="FP-REF-TAG-OVERRIDE">
+        <color>color6</color>
+        <comments>Reference tag for inherited object override examples.</comments>
+      </entry>
+    </tag>
+    <address>
+      <entry name="FP-REF-ADDR-HQ-USERS-10.10.10.0_24">
+        <ip-netmask>10.10.10.0/24</ip-netmask>
+        <description>Shared HQ user subnet for rule source matching.</description>
+        <tag>
+          <member>FP-REF-TAG-POLICY-AUDIT</member>
+        </tag>
+      </entry>
+      <entry name="FP-REF-ADDR-DMZ-WEB-10.20.10.10">
+        <ip-netmask>10.20.10.10</ip-netmask>
+        <description>Shared single host DMZ web server.</description>
+        <tag>
+          <member>FP-REF-TAG-DMZ</member>
+        </tag>
+      </entry>
+      <entry name="FP-REF-ADDR-DMZ-API-10.20.10.20">
+        <ip-netmask>10.20.10.20</ip-netmask>
+        <description>Shared single host DMZ API server.</description>
+        <tag>
+          <member>FP-REF-TAG-DMZ</member>
+        </tag>
+      </entry>
+      <entry name="FP-REF-ADDR-GUEST-RANGE-10.30.10.50-10.30.10.99">
+        <ip-range>10.30.10.50-10.30.10.99</ip-range>
+        <description>Shared IP range for guest examples.</description>
+      </entry>
+      <entry name="FP-REF-ADDR-FQDN-APP1">
+        <fqdn>app1.example.internal</fqdn>
+        <description>Shared FQDN address object for FQDN parsing.</description>
+      </entry>
+      <entry name="FP-REF-ADDR-PUBLIC-NAT-203.0.113.10">
+        <ip-netmask>203.0.113.10</ip-netmask>
+        <description>Shared documentation-range public NAT address.</description>
+        <tag>
+          <member>FP-REF-TAG-INTERNET-EDGE</member>
+        </tag>
+      </entry>
+    </address>
+    <address-group>
+      <entry name="FP-REF-AG-STATIC-DMZ-SERVERS">
+        <static>
+          <member>FP-REF-ADDR-DMZ-WEB-10.20.10.10</member>
+          <member>FP-REF-ADDR-DMZ-API-10.20.10.20</member>
+        </static>
+        <description>Static address group with two DMZ hosts.</description>
+        <tag>
+          <member>FP-REF-TAG-DMZ</member>
+        </tag>
+      </entry>
+      <entry name="FP-REF-AG-DYNAMIC-DMZ-TAG">
+        <dynamic>
+          <filter>'FP-REF-TAG-DMZ'</filter>
+        </dynamic>
+        <description>Dynamic address group selected by DMZ reference tag.</description>
+      </entry>
+    </address-group>
+    <service>
+      <entry name="FP-REF-SVC-TCP-8443">
+        <protocol>
+          <tcp>
+            <port>8443</port>
+          </tcp>
+        </protocol>
+        <description>Reference TCP service on 8443.</description>
+        <tag>
+          <member>FP-REF-TAG-POLICY-AUDIT</member>
+        </tag>
+      </entry>
+      <entry name="FP-REF-SVC-TCP-WEB-ALT">
+        <protocol>
+          <tcp>
+            <port>8080,8081</port>
+            <override>
+              <no />
+            </override>
+          </tcp>
+        </protocol>
+        <description>Reference TCP service with multiple destination ports.</description>
+      </entry>
+      <entry name="FP-REF-SVC-UDP-1194">
+        <protocol>
+          <udp>
+            <port>1194</port>
+          </udp>
+        </protocol>
+        <description>Reference UDP service for protocol parsing.</description>
+      </entry>
+    </service>
+    <service-group>
+      <entry name="FP-REF-SG-WEB-ALT">
+        <members>
+          <member>FP-REF-SVC-TCP-8443</member>
+          <member>FP-REF-SVC-TCP-WEB-ALT</member>
+          <member>service-http</member>
+          <member>service-https</member>
+        </members>
+        <tag>
+          <member>FP-REF-TAG-POLICY-AUDIT</member>
+        </tag>
+      </entry>
+    </service-group>
+    <application-group>
+      <entry name="FP-REF-APP-GROUP-WEB">
+        <members>
+          <member>ssl</member>
+          <member>web-browsing</member>
+        </members>
+      </entry>
+    </application-group>
+    <profiles>
+      <custom-url-category>
+        <entry name="FP-REF-URLCAT-EXAMPLE-SITES" uuid="0f3cb708-9231-40a7-9d63-2ecc22990dc1">
+          <type>URL List</type>
+          <list>
+            <member>example.com</member>
+            <member>*.example.internal</member>
+          </list>
+          <description>Reference custom URL category list for URL category parsing.</description>
+        </entry>
+      </custom-url-category>
+    </profiles>
+    <profile-group>
+      <entry name="FP-REF-PROFILE-GROUP-DEFAULTS">
+        <virus>
+          <member>default</member>
+        </virus>
+        <spyware>
+          <member>default</member>
+        </spyware>
+        <vulnerability>
+          <member>default</member>
+        </vulnerability>
+        <url-filtering>
+          <member>default</member>
+        </url-filtering>
+      </entry>
+    </profile-group>
+    <external-list>
+      <entry name="FP-REF-EDL-IP-LIST">
+        <type>
+          <ip>
+            <url>https://example.com/frying-pan-ip-edl.txt</url>
+            <recurring>
+              <hourly />
+            </recurring>
+          </ip>
+        </type>
+      </entry>
+    </external-list>
+  </shared>
+  <devices>
+    <entry name="localhost.localdomain">
+      <deviceconfig>
+        <system>
+          <ip-address>192.168.76.70</ip-address>
+          <netmask>255.255.255.0</netmask>
+          <update-server>updates.paloaltonetworks.com</update-server>
+          <update-schedule>
+            <threats>
+              <recurring>
+                <weekly>
+                  <day-of-week>wednesday</day-of-week>
+                  <at>01:02</at>
+                  <action>download-only</action>
+                </weekly>
+              </recurring>
+            </threats>
+          </update-schedule>
+          <timezone>US/Eastern</timezone>
+          <service>
+            <disable-telnet>yes</disable-telnet>
+            <disable-http>yes</disable-http>
+          </service>
+          <device-telemetry>
+            <device-health-performance>yes</device-health-performance>
+            <product-usage>yes</product-usage>
+            <threat-prevention>yes</threat-prevention>
+            <region>Americas</region>
+          </device-telemetry>
+          <hostname>PAN-HOSTNAME</hostname>
+          <type>
+            <static />
+          </type>
+          <default-gateway>192.168.76.1</default-gateway>
+          <domain>PAN.DOMAIN.COM</domain>
+          <login-banner>THIS IS THE
+
+LOGIN
+
+BANNER</login-banner>
+          <fqdn-refresh-time>1800</fqdn-refresh-time>
+          <dns-setting>
+            <servers>
+              <primary>192.168.76.1</primary>
+            </servers>
+          </dns-setting>
+          <ntp-servers>
+            <primary-ntp-server>
+              <ntp-server-address>time.cloudflare.com</ntp-server-address>
+              <authentication-type>
+                <none />
+              </authentication-type>
+            </primary-ntp-server>
+          </ntp-servers>
+          <permitted-ip>
+            <entry name="192.168.76.0/24" />
+            <entry name="192.168.101.0/24" />
+          </permitted-ip>
+          <dlsrvr>
+            <interface>mgmt</interface>
+          </dlsrvr>
+        </system>
+        <setting>
+          <management>
+            <storage-partition>
+              <internal />
+            </storage-partition>
+            <hostname-type-in-syslog>FQDN</hostname-type-in-syslog>
+          </management>
+          <gtp>no</gtp>
+          <sctp>no</sctp>
+        </setting>
+      </deviceconfig>
+      <template>
+        <entry name="TEMPLATE">
+          <settings>
+            <default-vsys>vsys1</default-vsys>
+          </settings>
+          <config>
+            <devices>
+              <entry name="localhost.localdomain">
+                <vsys>
+                  <entry name="vsys1">
+                    <zone>
+                      <entry name="FP-REF-ZONE-UNTRUST">
+                        <network>
+                          <layer3>
+                            <member>ethernet1/1</member>
+                          </layer3>
+                        </network>
+                      </entry>
+                      <entry name="FP-REF-ZONE-TRUST">
+                        <network>
+                          <layer3>
+                            <member>ethernet1/2</member>
+                          </layer3>
+                        </network>
+                      </entry>
+                      <entry name="FP-REF-ZONE-DMZ">
+                        <network>
+                          <layer3>
+                            <member>ethernet1/3</member>
+                          </layer3>
+                        </network>
+                      </entry>
+                      <entry name="FP-REF-ZONE-GUEST">
+                        <network>
+                          <layer3>
+                            <member>ethernet1/4</member>
+                          </layer3>
+                        </network>
+                      </entry>
+                      <entry name="FP-REF-ZONE-VPN">
+                        <network>
+                          <layer3>
+                            <member>tunnel.10</member>
+                          </layer3>
+                        </network>
+                      </entry>
+                    </zone>
+                    <import>
+                      <network>
+                        <interface>
+                          <member>ethernet1/1</member>
+                          <member>ethernet1/2</member>
+                          <member>ethernet1/3</member>
+                          <member>ethernet1/4</member>
+                          <member>loopback.10</member>
+                          <member>tunnel.10</member>
+                        </interface>
+                      </network>
+                    </import>
+                  </entry>
+                </vsys>
+                <network>
+                  <profiles>
+                    <interface-management-profile>
+                      <entry name="FP-REF-MGMT-PROFILE-PING-HTTPS">
+                        <ping>yes</ping>
+                        <https>yes</https>
+                        <response-pages>no</response-pages>
+                        <userid-service>no</userid-service>
+                      </entry>
+                    </interface-management-profile>
+                  </profiles>
+                  <interface>
+                    <ethernet>
+                      <entry name="ethernet1/1">
+                        <comment>FP reference untrust interface.</comment>
+                        <layer3>
+                          <ip>
+                            <entry name="203.0.113.2/30" />
+                          </ip>
+                          <interface-management-profile>FP-REF-MGMT-PROFILE-PING-HTTPS</interface-management-profile>
+                        </layer3>
+                      </entry>
+                      <entry name="ethernet1/2">
+                        <comment>FP reference trust interface.</comment>
+                        <layer3>
+                          <ip>
+                            <entry name="10.10.10.1/24" />
+                          </ip>
+                        </layer3>
+                      </entry>
+                      <entry name="ethernet1/3">
+                        <comment>FP reference DMZ interface.</comment>
+                        <layer3>
+                          <ip>
+                            <entry name="10.20.10.1/24" />
+                          </ip>
+                        </layer3>
+                      </entry>
+                      <entry name="ethernet1/4">
+                        <comment>FP reference guest interface.</comment>
+                        <layer3>
+                          <ip>
+                            <entry name="10.30.10.1/24" />
+                          </ip>
+                        </layer3>
+                      </entry>
+                    </ethernet>
+                    <loopback>
+                      <units>
+                        <entry name="loopback.10">
+                          <comment>FP reference loopback interface.</comment>
+                          <ip>
+                            <entry name="10.255.10.1/32" />
+                          </ip>
+                        </entry>
+                      </units>
+                    </loopback>
+                    <tunnel>
+                      <units>
+                        <entry name="tunnel.10">
+                          <comment>FP reference tunnel interface placeholder.</comment>
+                          <ip>
+                            <entry name="169.254.10.1/30" />
+                          </ip>
+                        </entry>
+                      </units>
+                    </tunnel>
+                  </interface>
+                  <virtual-router>
+                    <entry name="FP-REF-VR-DEFAULT">
+                      <interface>
+                        <member>ethernet1/1</member>
+                        <member>ethernet1/2</member>
+                        <member>ethernet1/3</member>
+                        <member>ethernet1/4</member>
+                        <member>loopback.10</member>
+                        <member>tunnel.10</member>
+                      </interface>
+                      <routing-table>
+                        <ip>
+                          <static-route>
+                            <entry name="FP-REF-DEFAULT-ROUTE">
+                              <destination>0.0.0.0/0</destination>
+                              <interface>ethernet1/1</interface>
+                              <nexthop>
+                                <ip-address>203.0.113.1</ip-address>
+                              </nexthop>
+                            </entry>
+                            <entry name="FP-REF-BRANCH-ROUTE">
+                              <destination>10.50.10.0/24</destination>
+                              <interface>tunnel.10</interface>
+                              <nexthop>
+                                <ip-address>169.254.10.2</ip-address>
+                              </nexthop>
+                            </entry>
+                          </static-route>
+                        </ip>
+                      </routing-table>
+                    </entry>
+                  </virtual-router>
+                </network>
+              </entry>
+            </devices>
+          </config>
+        </entry>
+      </template>
+      <template-stack>
+        <entry name="TEMPLATE-STACK">
+          <user-group-source>
+            <master-device />
+          </user-group-source>
+          <templates>
+            <member>TEMPLATE</member>
+          </templates>
+          <description>Template stack containing FP reference template configuration examples.</description>
+        </entry>
+      </template-stack>
+      <device-group>
+        <entry name="DEVICE-GROUP-1">
+          <description>DG1 Description - includes FP reference CI examples.</description>
+          <devices />
+          <address>
+            <entry name="FP-REF-DG1-ADDR-APP-A">
+              <ip-netmask>10.40.10.10</ip-netmask>
+              <description>Device Group 1 application host.</description>
+              <tag>
+                <member>FP-REF-TAG-MIGRATION</member>
+              </tag>
+            </entry>
+            <entry name="FP-REF-DG1-ADDR-OVERRIDE-ME">
+              <ip-netmask>10.40.20.10</ip-netmask>
+              <description>Parent object intentionally overridden in CHILD-DG-1.</description>
+              <tag>
+                <member>FP-REF-TAG-OVERRIDE</member>
+              </tag>
+            </entry>
+          </address>
+          <address-group>
+            <entry name="FP-REF-DG1-AG-APP">
+              <static>
+                <member>FP-REF-DG1-ADDR-APP-A</member>
+                <member>FP-REF-DG1-ADDR-OVERRIDE-ME</member>
+              </static>
+              <description>Device Group 1 static address group referencing local objects.</description>
+            </entry>
+          </address-group>
+          <service>
+            <entry name="FP-REF-DG1-SVC-TCP-9443">
+              <protocol>
+                <tcp>
+                  <port>9443</port>
+                </tcp>
+              </protocol>
+              <description>Device Group 1 scoped TCP service.</description>
+            </entry>
+          </service>
+          <pre-rulebase>
+            <security>
+              <rules>
+                <entry name="FP-REF-PRE-ALLOW-HQ-TO-DMZ-WEB" uuid="ea72f781-f3f4-4657-a16b-8353638e763a">
+                  <description>Pre-rule allow using shared address group, App-ID, application-default, tags, and profile group.</description>
+                  <from>
+                    <member>FP-REF-ZONE-TRUST</member>
+                  </from>
+                  <to>
+                    <member>FP-REF-ZONE-DMZ</member>
+                  </to>
+                  <source>
+                    <member>FP-REF-ADDR-HQ-USERS-10.10.10.0_24</member>
+                  </source>
+                  <destination>
+                    <member>FP-REF-AG-STATIC-DMZ-SERVERS</member>
+                  </destination>
+                  <source-user>
+                    <member>any</member>
+                  </source-user>
+                  <category>
+                    <member>any</member>
+                  </category>
+                  <application>
+                    <member>web-browsing</member>
+                    <member>ssl</member>
+                  </application>
+                  <service>
+                    <member>application-default</member>
+                  </service>
+                  <source-hip>
+                    <member>any</member>
+                  </source-hip>
+                  <destination-hip>
+                    <member>any</member>
+                  </destination-hip>
+                  <action>allow</action>
+                  <profile-setting>
+                    <group>
+                      <member>FP-REF-PROFILE-GROUP-DEFAULTS</member>
+                    </group>
+                  </profile-setting>
+                  <log-start>no</log-start>
+                  <log-end>yes</log-end>
+                  <tag>
+                    <member>FP-REF-TAG-POLICY-AUDIT</member>
+                  </tag>
+                </entry>
+                <entry name="FP-REF-PRE-DENY-GUEST-TO-APP" uuid="79572bf0-5147-448b-8b3b-5cf5eac737d4">
+                  <description>Pre-rule deny example for broad/deny rule parsing.</description>
+                  <from>
+                    <member>FP-REF-ZONE-GUEST</member>
+                  </from>
+                  <to>
+                    <member>FP-REF-ZONE-DMZ</member>
+                  </to>
+                  <source>
+                    <member>FP-REF-ADDR-GUEST-RANGE-10.30.10.50-10.30.10.99</member>
+                  </source>
+                  <destination>
+                    <member>FP-REF-DG1-AG-APP</member>
+                  </destination>
+                  <source-user>
+                    <member>any</member>
+                  </source-user>
+                  <category>
+                    <member>any</member>
+                  </category>
+                  <application>
+                    <member>any</member>
+                  </application>
+                  <service>
+                    <member>any</member>
+                  </service>
+                  <source-hip>
+                    <member>any</member>
+                  </source-hip>
+                  <destination-hip>
+                    <member>any</member>
+                  </destination-hip>
+                  <action>deny</action>
+                  <log-end>yes</log-end>
+                  <tag>
+                    <member>FP-REF-TAG-POLICY-AUDIT</member>
+                  </tag>
+                </entry>
+              </rules>
+            </security>
+            <nat>
+              <rules>
+                <entry name="FP-REF-PRE-SOURCE-NAT-HQ-USERS" uuid="d317f45e-0079-491a-9405-34cf1ef27b11">
+                  <description>Pre-rulebase source NAT example using dynamic IP and port.</description>
+                  <from>
+                    <member>FP-REF-ZONE-TRUST</member>
+                  </from>
+                  <to>
+                    <member>FP-REF-ZONE-UNTRUST</member>
+                  </to>
+                  <to-interface>any</to-interface>
+                  <source>
+                    <member>FP-REF-ADDR-HQ-USERS-10.10.10.0_24</member>
+                  </source>
+                  <destination>
+                    <member>any</member>
+                  </destination>
+                  <service>any</service>
+                  <source-translation>
+                    <dynamic-ip-and-port>
+                      <translated-address>
+                        <member>FP-REF-ADDR-PUBLIC-NAT-203.0.113.10</member>
+                      </translated-address>
+                    </dynamic-ip-and-port>
+                  </source-translation>
+                </entry>
+                <entry name="FP-REF-PRE-DEST-NAT-DMZ-WEB" uuid="440d9028-bfd5-4dee-ade3-b493b00b7d57">
+                  <description>Pre-rulebase destination NAT example to a DMZ web host.</description>
+                  <from>
+                    <member>FP-REF-ZONE-UNTRUST</member>
+                  </from>
+                  <to>
+                    <member>FP-REF-ZONE-UNTRUST</member>
+                  </to>
+                  <to-interface>any</to-interface>
+                  <source>
+                    <member>any</member>
+                  </source>
+                  <destination>
+                    <member>FP-REF-ADDR-PUBLIC-NAT-203.0.113.10</member>
+                  </destination>
+                  <service>service-https</service>
+                  <destination-translation>
+                    <translated-address>10.20.10.10</translated-address>
+                    <translated-port>443</translated-port>
+                  </destination-translation>
+                </entry>
+              </rules>
+            </nat>
+          </pre-rulebase>
+          <post-rulebase>
+            <security>
+              <rules>
+                <entry name="FP-REF-POST-ALLOW-DG1-APP-ADMIN" uuid="0f41179a-c161-44e2-97cc-d1588d82d06f">
+                  <description>Post-rule scoped allow using DG-local service and objects.</description>
+                  <from>
+                    <member>FP-REF-ZONE-TRUST</member>
+                  </from>
+                  <to>
+                    <member>FP-REF-ZONE-DMZ</member>
+                  </to>
+                  <source>
+                    <member>FP-REF-ADDR-HQ-USERS-10.10.10.0_24</member>
+                  </source>
+                  <destination>
+                    <member>FP-REF-DG1-AG-APP</member>
+                  </destination>
+                  <source-user>
+                    <member>any</member>
+                  </source-user>
+                  <category>
+                    <member>any</member>
+                  </category>
+                  <application>
+                    <member>ssl</member>
+                  </application>
+                  <service>
+                    <member>FP-REF-DG1-SVC-TCP-9443</member>
+                  </service>
+                  <source-hip>
+                    <member>any</member>
+                  </source-hip>
+                  <destination-hip>
+                    <member>any</member>
+                  </destination-hip>
+                  <action>allow</action>
+                  <log-end>yes</log-end>
+                  <tag>
+                    <member>FP-REF-TAG-MIGRATION</member>
+                  </tag>
+                </entry>
+                <entry name="FP-REF-POST-DENY-ANY-CLEANUP" uuid="2145f19d-7874-47e4-bff7-2500f916da15">
+                  <description>Explicit cleanup deny for first-match/order tests.</description>
+                  <from>
+                    <member>any</member>
+                  </from>
+                  <to>
+                    <member>any</member>
+                  </to>
+                  <source>
+                    <member>any</member>
+                  </source>
+                  <destination>
+                    <member>any</member>
+                  </destination>
+                  <source-user>
+                    <member>any</member>
+                  </source-user>
+                  <category>
+                    <member>any</member>
+                  </category>
+                  <application>
+                    <member>any</member>
+                  </application>
+                  <service>
+                    <member>any</member>
+                  </service>
+                  <source-hip>
+                    <member>any</member>
+                  </source-hip>
+                  <destination-hip>
+                    <member>any</member>
+                  </destination-hip>
+                  <action>deny</action>
+                  <log-end>yes</log-end>
+                </entry>
+              </rules>
+            </security>
+          </post-rulebase>
+        </entry>
+        <entry name="CHILD-DG-1">
+          <devices type="array" />
+          <description>Child DG 1 includes inherited object override examples.</description>
+          <address>
+            <entry name="FP-REF-DG1-ADDR-OVERRIDE-ME">
+              <ip-netmask>10.41.20.10</ip-netmask>
+              <description>Child override of parent DG object with same name.</description>
+              <tag>
+                <member>FP-REF-TAG-OVERRIDE</member>
+              </tag>
+            </entry>
+            <entry name="FP-REF-CHILD-DG1-ADDR-LOCAL">
+              <ip-netmask>10.41.30.10</ip-netmask>
+              <description>Child-only address object for inheritance tests.</description>
+            </entry>
+          </address>
+          <address-group>
+            <entry name="FP-REF-CHILD-DG1-AG-MIXED">
+              <static>
+                <member>FP-REF-DG1-ADDR-OVERRIDE-ME</member>
+                <member>FP-REF-CHILD-DG1-ADDR-LOCAL</member>
+                <member>FP-REF-ADDR-DMZ-WEB-10.20.10.10</member>
+              </static>
+              <description>Child group mixing overridden, child, and shared references.</description>
+            </entry>
+          </address-group>
+          <pre-rulebase>
+            <security>
+              <rules>
+                <entry name="FP-REF-CHILD-PRE-ALLOW-OVERRIDE-APP" uuid="0f4a5884-9c5d-4e7d-863a-2dc5c8ce2033">
+                  <description>Child pre-rule that resolves an overridden object name in child scope.</description>
+                  <from>
+                    <member>FP-REF-ZONE-TRUST</member>
+                  </from>
+                  <to>
+                    <member>FP-REF-ZONE-DMZ</member>
+                  </to>
+                  <source>
+                    <member>FP-REF-ADDR-HQ-USERS-10.10.10.0_24</member>
+                  </source>
+                  <destination>
+                    <member>FP-REF-DG1-ADDR-OVERRIDE-ME</member>
+                  </destination>
+                  <source-user>
+                    <member>any</member>
+                  </source-user>
+                  <category>
+                    <member>any</member>
+                  </category>
+                  <application>
+                    <member>ssl</member>
+                  </application>
+                  <service>
+                    <member>application-default</member>
+                  </service>
+                  <source-hip>
+                    <member>any</member>
+                  </source-hip>
+                  <destination-hip>
+                    <member>any</member>
+                  </destination-hip>
+                  <action>allow</action>
+                  <log-end>yes</log-end>
+                  <tag>
+                    <member>FP-REF-TAG-OVERRIDE</member>
+                  </tag>
+                </entry>
+              </rules>
+            </security>
+          </pre-rulebase>
+        </entry>
+        <entry name="DEVICE-GROUP-2">
+          <devices />
+          <description>Device Group 2 includes separate reference scope examples.</description>
+          <address>
+            <entry name="FP-REF-DG2-ADDR-BRANCH-USERS">
+              <ip-netmask>10.50.10.0/24</ip-netmask>
+              <description>Device Group 2 branch user subnet.</description>
+            </entry>
+          </address>
+          <service>
+            <entry name="FP-REF-DG2-SVC-UDP-4500">
+              <protocol>
+                <udp>
+                  <port>4500</port>
+                </udp>
+              </protocol>
+              <description>Device Group 2 UDP service example.</description>
+            </entry>
+          </service>
+        </entry>
+        <entry name="CHILD-DG-2">
+          <devices type="array" />
+        </entry>
+      </device-group>
+    </entry>
+  </devices>
+  <panorama>
+    <authentication-profile>
+      <entry name="AUTH-PROFILE">
+        <method>
+          <none />
+        </method>
+        <allow-list>
+          <member>all</member>
+        </allow-list>
+      </entry>
+    </authentication-profile>
+    <authentication-sequence>
+      <entry name="AUTH-SEQUENCE">
+        <use-domain-find-profile>yes</use-domain-find-profile>
+      </entry>
+    </authentication-sequence>
+  </panorama>
+  <readonly>
+    <max-internal-id>25</max-internal-id>
+    <devices>
+      <entry name="localhost.localdomain">
+        <template>
+          <entry name="TEMPLATE">
+            <id>11</id>
+            <config>
+              <devices>
+                <entry name="localhost.localdomain">
+                  <vsys>
+                    <entry name="vsys1">
+                      <zone>
+                        <entry name="FP-REF-ZONE-UNTRUST">
+                          <id>21</id>
+                        </entry>
+                        <entry name="FP-REF-ZONE-TRUST">
+                          <id>22</id>
+                        </entry>
+                        <entry name="FP-REF-ZONE-DMZ">
+                          <id>23</id>
+                        </entry>
+                        <entry name="FP-REF-ZONE-GUEST">
+                          <id>24</id>
+                        </entry>
+                        <entry name="FP-REF-ZONE-VPN">
+                          <id>25</id>
+                        </entry>
+                      </zone>
+                    </entry>
+                  </vsys>
+                </entry>
+              </devices>
+            </config>
+          </entry>
+        </template>
+        <template-stack>
+          <entry name="TEMPLATE-STACK">
+            <id>12</id>
+          </entry>
+        </template-stack>
+        <device-group>
+          <entry name="DEVICE-GROUP-1">
+            <id>13</id>
+            <address-group>
+              <entry name="FP-REF-DG1-AG-APP">
+                <id>19</id>
+              </entry>
+            </address-group>
+          </entry>
+          <entry name="CHILD-DG-1">
+            <parent-dg>DEVICE-GROUP-1</parent-dg>
+            <id>14</id>
+            <address-group>
+              <entry name="FP-REF-CHILD-DG1-AG-MIXED">
+                <id>20</id>
+              </entry>
+            </address-group>
+          </entry>
+          <entry name="DEVICE-GROUP-2">
+            <id>15</id>
+          </entry>
+          <entry name="CHILD-DG-2">
+            <parent-dg>DEVICE-GROUP-2</parent-dg>
+            <id>16</id>
+          </entry>
+        </device-group>
+      </entry>
+    </devices>
+    <shared>
+      <address-group>
+        <entry name="FP-REF-AG-STATIC-DMZ-SERVERS">
+          <id>17</id>
+        </entry>
+        <entry name="FP-REF-AG-DYNAMIC-DMZ-TAG">
+          <id>18</id>
+        </entry>
+      </address-group>
+    </shared>
+  </readonly>
+</config>

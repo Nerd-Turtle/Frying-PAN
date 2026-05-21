@@ -1,0 +1,9 @@
+<config version="11.1.0">
+  <shared>
+    <address>
+      <entry name="UNKNOWN-SHARED-ADDR">
+        <ip-netmask>192.0.2.10</ip-netmask>
+      </entry>
+    </address>
+  </shared>
+</config>

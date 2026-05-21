@@ -1,6 +1,6 @@
 # Phase 1: PAN-OS Inventory Analyzer
 
-Status: active
+Status: complete
 
 ## Goal
 
@@ -65,7 +65,7 @@ A Task cannot be marked complete unless its validation criteria are satisfied.
 
 ### Task 1.1: Source Detection Improvements
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -101,9 +101,27 @@ Completion Criteria:
   flags.
 - Validation evidence is recorded before status is changed to complete.
 
+Validation Evidence:
+
+- `.venv/bin/python -m pytest tests/test_source_detection.py -q`
+  - `4 passed in 0.12s`
+- `.venv/bin/python -m ruff check .`
+  - `All checks passed!`
+- `.venv/bin/python -m frying_pan.cli.main detect tests/fixtures/panorama/reference_config_items.xml`
+  - detected `panorama_xml`, PAN-OS `11.2.0`, shared scope, Device Groups,
+    template, and template stack
+- `.venv/bin/python -m frying_pan.cli.main detect tests/fixtures/firewall/basic_firewall.xml`
+  - detected `firewall_xml`, PAN-OS `11.1.0`, and `vsys`
+- `.venv/bin/python -m frying_pan.cli.main detect tests/fixtures/unknown/unknown_panos.xml`
+  - detected `unknown_panos_xml` with shared scope and a useful warning
+- `.venv/bin/python -m frying_pan.cli.main detect tests/fixtures/invalid/broken.xml`
+  - detected `unknown` with an XML parse warning
+- `.venv/bin/python -m pytest -q`
+  - `16 passed in 0.16s`
+
 ### Task 1.2: PAN-OS XML Notes
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -142,9 +160,22 @@ Completion Criteria:
 - Documentation update evidence is recorded before status is changed to
   complete.
 
+Validation Evidence:
+
+- `docs/panos-xml-notes.md` updated with implemented source detection behavior,
+  Panorama shared/Device Group paths, pre/post-rulebase paths, template and
+  template-stack paths, standalone firewall `vsys` paths, limitations, and
+  official Palo Alto Networks documentation references.
+- `frying_pan/sources/detection.py` includes a source note for the PAN-OS
+  XML/XPath layout reference used by detection.
+- `.venv/bin/python -m ruff check .`
+  - `All checks passed!`
+- `.venv/bin/python -m pytest -q`
+  - `16 passed in 0.15s`
+
 ### Task 1.3: Panorama Parser Implementation
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -185,9 +216,25 @@ Completion Criteria:
 - Tests and docs reflect the implemented XML paths.
 - Validation evidence is recorded before status is changed to complete.
 
+Validation Evidence:
+
+- `PanoramaXmlAdapter` parses shared scope, Device Group scopes, parent Device
+  Group metadata from readonly hierarchy, address objects, address groups,
+  services, service groups, tags, and security pre/post rules.
+- Parser warnings preserve unsupported/partial behavior, including dynamic
+  address group filters that are stored but not evaluated.
+- `docs/panos-xml-notes.md` updated to reflect implemented Panorama parser
+  foundation and remaining limitations.
+- `.venv/bin/python -m pytest tests/test_panorama_parser.py -q`
+  - `4 passed in 0.14s`
+- `.venv/bin/python -m ruff check .`
+  - `All checks passed!`
+- `.venv/bin/python -m pytest -q`
+  - `20 passed in 0.17s`
+
 ### Task 1.4: Standalone Firewall Parser Implementation
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -220,9 +267,24 @@ Completion Criteria:
 - Standalone firewall limitations are documented.
 - Validation evidence is recorded before status is changed to complete.
 
+Validation Evidence:
+
+- `FirewallXmlAdapter` parses standalone firewall `vsys` scopes without
+  assuming Panorama Device Group structure.
+- Parser extracts local address objects, address groups, services, service
+  groups, tags, and local security rules.
+- `docs/panos-xml-notes.md` updated to reflect standalone firewall parser
+  foundation and remaining limitations.
+- `.venv/bin/python -m pytest tests/test_firewall_parser.py -q`
+  - `4 passed in 0.13s`
+- `.venv/bin/python -m ruff check .`
+  - `All checks passed!`
+- `.venv/bin/python -m pytest -q`
+  - `24 passed in 0.18s`
+
 ### Task 1.5: Normalized Inventory Models
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -273,9 +335,23 @@ Completion Criteria:
 - Tests prove both Panorama and firewall parsed data can use the models.
 - Validation evidence is recorded before status is changed to complete.
 
+Validation Evidence:
+
+- Normalized models now include `Rulebase`, `Reference`, and expanded
+  `Dependency` records in addition to source, scope, object, service, tag, and
+  security rule models.
+- `NormalizedConfig` carries rulebases, references, and dependencies alongside
+  scopes, entities, rules, conflicts, and warnings.
+- Parsed Panorama and firewall configs populate source metadata, scope metadata,
+  normalized entities, rulebases, references, and dependencies.
+- `.venv/bin/python -m pytest tests/test_inventory_models.py -q`
+  - `2 passed`
+- `.venv/bin/python -m ruff check .`
+  - `All checks passed!`
+
 ### Task 1.6: Object Parsing
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -329,9 +405,21 @@ Completion Criteria:
 - Unsupported or partial variants are clearly warned and documented.
 - Validation evidence is recorded before status is changed to complete.
 
+Validation Evidence:
+
+- Panorama and firewall parsers extract `ip-netmask`, `ip-range`, `fqdn`, static
+  and dynamic address groups, TCP/UDP services, service groups, and tags.
+- Dynamic address group filters are preserved but not evaluated, with explicit
+  parser warnings.
+- Unsupported address/service variants are tested to warn without crashing.
+- `.venv/bin/python -m pytest tests/test_panorama_parser.py tests/test_firewall_parser.py -q`
+  - parser tests passed
+- `.venv/bin/python -m ruff check .`
+  - `All checks passed!`
+
 ### Task 1.7: Security Rule Parsing
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -377,9 +465,23 @@ Completion Criteria:
 - Unsupported match criteria create warnings instead of silent assumptions.
 - Validation evidence is recorded before status is changed to complete.
 
+Validation Evidence:
+
+- Panorama pre/post security rules and standalone firewall local security rules
+  parse into `SecurityRule` records with rulebase type, order, zones, addresses,
+  users, applications, services, URL categories, action, disabled state, tags,
+  log settings, and profile-group metadata where present.
+- Rule order is preserved by rulebase-local `position`.
+- Tests cover allow, deny/drop, disabled rule metadata, URL category extraction,
+  source/destination/application/service extraction, and rulebase placement.
+- `.venv/bin/python -m pytest tests/test_panorama_parser.py tests/test_firewall_parser.py -q`
+  - parser tests passed
+- `.venv/bin/python -m ruff check .`
+  - `All checks passed!`
+
 ### Task 1.8: Reference Extraction
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -415,9 +517,22 @@ Completion Criteria:
 - Limitations are documented.
 - Validation evidence is recorded before status is changed to complete.
 
+Validation Evidence:
+
+- `frying_pan.analysis.references.extract_references` creates structured
+  references from address groups, service groups, object/rule tags, rule zones,
+  source/destination addresses, applications, services, URL categories, and
+  profile groups.
+- References include owner, target, `ReferenceKind`, scope context, type hints,
+  resolved status, and unresolved warnings.
+- `.venv/bin/python -m pytest tests/test_object_resolver.py -q`
+  - reference extraction tests passed
+- `.venv/bin/python -m ruff check .`
+  - `All checks passed!`
+
 ### Task 1.9: Dependency Map Foundation
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -452,9 +567,22 @@ Completion Criteria:
 - Deferred graph features are explicitly documented.
 - Validation evidence is recorded before status is changed to complete.
 
+Validation Evidence:
+
+- `build_dependency_map(config)` converts structured references into dependency
+  records while preserving kind, type hints, scope context, resolved status, and
+  unresolved warnings.
+- Dependencies cover object-to-group, service-to-group, tag, and rule
+  references. Missing/predefined/runtime-only targets remain unresolved instead
+  of crashing.
+- `.venv/bin/python -m pytest tests/test_object_resolver.py -q`
+  - dependency map tests passed
+- `.venv/bin/python -m ruff check .`
+  - `All checks passed!`
+
 ### Task 1.10: CLI Inventory Output
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -495,9 +623,22 @@ Completion Criteria:
 - Output does not imply modification, migration, or XML export safety.
 - Validation evidence is recorded before status is changed to complete.
 
+Validation Evidence:
+
+- `frying-pan inventory` parses through `parse_source`, summarizes inventory,
+  supports text output, `--json`, and `--report-md`.
+- Invalid XML inventory parsing returns non-zero with a useful message.
+- CLI detect/inventory worked against Panorama and firewall fixtures.
+- `.venv/bin/python -m pytest tests/test_cli_inventory.py -q`
+  - CLI inventory tests passed
+- `.venv/bin/python -m frying_pan.cli.main inventory tests/fixtures/panorama/reference_config_items.xml`
+  - `Source type: panorama_xml`, `Scopes: 5`, `Security rules: 5`
+- `.venv/bin/python -m frying_pan.cli.main inventory tests/fixtures/firewall/reference_config_items_virtual_router.xml`
+  - `Source type: firewall_xml`, `Scopes: 1`, `Security rules: 4`
+
 ### Task 1.11: GUI Inventory Display
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -527,9 +668,21 @@ Completion Criteria:
 - GUI remains a thin presentation layer.
 - Validation evidence is recorded before status is changed to complete.
 
+Validation Evidence:
+
+- Added `InventoryView`, which consumes a `NormalizedConfig` and displays
+  counts, scopes, objects, and security rules without parser logic.
+- Enhanced source tree model to expose scopes, objects, and rules from the core
+  normalized model.
+- Main navigation includes an Inventory page.
+- `QT_QPA_PLATFORM=offscreen .venv/bin/python - <<'PY' ... MainWindow() ... PY`
+  - constructed `Frying-PAN` with 10 navigation pages
+- `.venv/bin/python -m pytest tests/test_gui_inventory.py -q`
+  - GUI inventory tests passed
+
 ### Task 1.12: Markdown/HTML Report Foundation
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -566,9 +719,21 @@ Completion Criteria:
 - Reports are honest about limitations and blocked XML mutation/export.
 - Validation evidence is recorded before status is changed to complete.
 
+Validation Evidence:
+
+- Markdown inventory reports include source, source type, scopes, object counts,
+  rule counts, reference/dependency counts, unresolved reference counts, parser
+  warnings, and explicit limitations.
+- Reports state they do not imply XML mutation, migration, or production-safe
+  export support.
+- `.venv/bin/python -m pytest tests/test_report_exporter.py -q`
+  - report generation tests passed
+- `.venv/bin/python -m frying_pan.cli.main inventory tests/fixtures/panorama/reference_config_items.xml --report-md /tmp/.../report.md`
+  - generated Markdown report with limitations and parser warnings.
+
 ### Task 1.13: Final Phase 1 Validation
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -603,6 +768,28 @@ Completion Criteria:
 - No known blocking issues remain untracked.
 - Roadmap Phase 1 status can be changed from active to complete only after all
   validation evidence is recorded.
+
+Validation Evidence:
+
+- `.venv/bin/python -m pytest -q`
+  - `39 passed in 0.38s`
+- `.venv/bin/python -m ruff check .`
+  - `All checks passed!`
+- `.venv/bin/python -m frying_pan.cli.main detect tests/fixtures/panorama/reference_config_items.xml`
+  - detected `panorama_xml`, PAN-OS `11.2.0`, shared scope, Device Groups,
+    template, and template stack
+- `.venv/bin/python -m frying_pan.cli.main inventory tests/fixtures/panorama/reference_config_items.xml`
+  - `Scopes: 5`, `Entities: 27`, `Security rules: 5`, `References: 49`
+- `.venv/bin/python -m frying_pan.cli.main detect tests/fixtures/firewall/reference_config_items_virtual_router.xml`
+  - detected `firewall_xml`, PAN-OS `12.1.0`, shared scope, and `vsys`
+- `.venv/bin/python -m frying_pan.cli.main inventory tests/fixtures/firewall/reference_config_items_virtual_router.xml`
+  - `Scopes: 1`, `Entities: 14`, `Security rules: 4`, `References: 29`
+- `.venv/bin/python -m frying_pan.cli.main inventory tests/fixtures/invalid/broken.xml`
+  - returned exit code `1` with an XML parse warning
+- Offscreen GUI construction passed with `Frying-PAN 10`
+- Inventory report generation passed through CLI and tests.
+- `docs/panos-xml-notes.md`, `README.md`, and `docs/devel/roadmap.md` updated.
+- XML mutation/export remains blocked.
 
 ## Phase 1 Completion Rules
 

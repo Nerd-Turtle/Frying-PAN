@@ -1,0 +1,83 @@
+<config version="11.1.0">
+  <devices>
+    <entry name="localhost.localdomain">
+      <vsys>
+        <entry name="vsys1">
+          <address>
+            <entry name="FW-REF-ADDR-USERS">
+              <ip-netmask>10.60.10.0/24</ip-netmask>
+              <description>Standalone firewall user subnet.</description>
+            </entry>
+            <entry name="FW-REF-ADDR-WEB">
+              <ip-netmask>10.70.10.10</ip-netmask>
+            </entry>
+          </address>
+          <address-group>
+            <entry name="FW-REF-AG-WEB">
+              <static>
+                <member>FW-REF-ADDR-WEB</member>
+              </static>
+            </entry>
+          </address-group>
+          <service>
+            <entry name="FW-REF-SVC-TCP-8443">
+              <protocol>
+                <tcp>
+                  <port>8443</port>
+                </tcp>
+              </protocol>
+            </entry>
+          </service>
+          <service-group>
+            <entry name="FW-REF-SG-WEB">
+              <members>
+                <member>FW-REF-SVC-TCP-8443</member>
+                <member>service-https</member>
+              </members>
+            </entry>
+          </service-group>
+          <tag>
+            <entry name="FW-REF-TAG-LOCAL">
+              <color>color7</color>
+              <comments>Standalone firewall local tag.</comments>
+            </entry>
+          </tag>
+          <rulebase>
+            <security>
+              <rules>
+                <entry name="FW-REF-ALLOW-USERS-WEB">
+                  <from>
+                    <member>trust</member>
+                  </from>
+                  <to>
+                    <member>dmz</member>
+                  </to>
+                  <source>
+                    <member>FW-REF-ADDR-USERS</member>
+                  </source>
+                  <destination>
+                    <member>FW-REF-AG-WEB</member>
+                  </destination>
+                  <source-user>
+                    <member>any</member>
+                  </source-user>
+                  <category>
+                    <member>any</member>
+                  </category>
+                  <application>
+                    <member>ssl</member>
+                  </application>
+                  <service>
+                    <member>FW-REF-SVC-TCP-8443</member>
+                  </service>
+                  <action>allow</action>
+                  <log-end>yes</log-end>
+                </entry>
+              </rules>
+            </security>
+          </rulebase>
+        </entry>
+      </vsys>
+    </entry>
+  </devices>
+</config>

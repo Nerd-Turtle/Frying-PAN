@@ -46,19 +46,28 @@ def detect_source(path: Path) -> SourceDetectionResult:
         )
 
     panos_version = root.get("version") or root.get("panos-version")
+    # PAN-OS XML/XPath layouts are documented by Palo Alto Networks and summarized
+    # in docs/panos-xml-notes.md for the specific parser paths Frying-PAN supports.
+    # Ref: https://docs.paloaltonetworks.com/pan-os/11-0/pan-os-panorama-api/about-the-pan-os-xml-api/structure-of-a-pan-os-xml-api-request/xml-and-xpath
+    has_shared_scope = bool(root.xpath("./shared"))
     supports_device_groups = bool(root.xpath("./devices/entry/device-group/entry"))
     has_vsys = bool(root.xpath("./devices/entry/vsys/entry"))
     has_templates = bool(root.xpath("./devices/entry/template/entry"))
     has_template_stacks = bool(root.xpath("./devices/entry/template-stack/entry"))
 
+    warnings: list[str] = []
     if supports_device_groups:
         source_type = SourceType.PANORAMA_XML
+        if has_vsys:
+            warnings.append(
+                "PAN-OS XML has both Device Group and firewall-style vsys layout; "
+                "using Panorama parser selection."
+            )
     elif has_vsys:
         source_type = SourceType.FIREWALL_XML
     else:
         source_type = SourceType.UNKNOWN_PANOS_XML
 
-    warnings: list[str] = []
     if source_type == SourceType.UNKNOWN_PANOS_XML:
         warnings.append(
             "PAN-OS XML was detected, but this pass could not identify Panorama or firewall layout."
@@ -67,6 +76,7 @@ def detect_source(path: Path) -> SourceDetectionResult:
     return SourceDetectionResult(
         source_type=source_type,
         panos_version=panos_version,
+        has_shared_scope=has_shared_scope,
         supports_device_groups=supports_device_groups,
         has_vsys=has_vsys,
         has_templates=has_templates,

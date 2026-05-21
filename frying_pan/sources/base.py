@@ -22,6 +22,7 @@ class SourceType(StrEnum):
 class SourceDetectionResult(BaseModel):
     source_type: SourceType
     panos_version: str | None = None
+    has_shared_scope: bool = False
     supports_device_groups: bool = False
     has_vsys: bool = False
     has_templates: bool = False

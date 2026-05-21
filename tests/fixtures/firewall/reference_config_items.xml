@@ -1,0 +1,898 @@
+<config version="12.1.0" urldb="paloaltonetworks" detail-version="12.1.6">
+  <mgt-config>
+    <users>
+      <entry name="admin">
+        <phash>REDACTED</phash>
+        <permissions>
+          <role-based>
+            <superuser>yes</superuser>
+          </role-based>
+        </permissions>
+      </entry>
+      <entry name="__telemetryuser">
+        <phash>REDACTED</phash>
+        <permissions>
+          <role-based>
+            <deviceadmin>
+              <member>localhost.localdomain</member>
+            </deviceadmin>
+          </role-based>
+        </permissions>
+      </entry>
+      <entry name="__vm_series">
+        <phash>REDACTED</phash>
+        <permissions>
+          <role-based>
+            <deviceadmin>
+              <member>localhost.localdomain</member>
+            </deviceadmin>
+          </role-based>
+        </permissions>
+      </entry>
+    </users>
+    <password-complexity>
+      <enabled>yes</enabled>
+      <minimum-length>8</minimum-length>
+    </password-complexity>
+  </mgt-config>
+  <shared>
+    <application />
+    <application-group />
+    <service>
+      <entry name="FP-REF-FW-SHARED-SVC-TCP-9443">
+        <protocol>
+          <tcp>
+            <port>9443</port>
+          </tcp>
+        </protocol>
+        <description>Shared firewall TCP service.</description>
+      </entry>
+    </service>
+    <service-group>
+      <entry name="FP-REF-FW-SHARED-SG-ADMIN">
+        <members>
+          <member>FP-REF-FW-SHARED-SVC-TCP-9443</member>
+          <member>service-https</member>
+        </members>
+      </entry>
+    </service-group>
+    <botnet>
+      <configuration>
+        <http>
+          <dynamic-dns>
+            <enabled>yes</enabled>
+            <threshold>5</threshold>
+          </dynamic-dns>
+          <malware-sites>
+            <enabled>yes</enabled>
+            <threshold>5</threshold>
+          </malware-sites>
+          <recent-domains>
+            <enabled>yes</enabled>
+            <threshold>5</threshold>
+          </recent-domains>
+          <ip-domains>
+            <enabled>yes</enabled>
+            <threshold>10</threshold>
+          </ip-domains>
+          <executables-from-unknown-sites>
+            <enabled>yes</enabled>
+            <threshold>5</threshold>
+          </executables-from-unknown-sites>
+        </http>
+        <other-applications>
+          <irc>yes</irc>
+        </other-applications>
+        <unknown-applications>
+          <unknown-tcp>
+            <destinations-per-hour>10</destinations-per-hour>
+            <sessions-per-hour>10</sessions-per-hour>
+            <session-length>
+              <maximum-bytes>100</maximum-bytes>
+              <minimum-bytes>50</minimum-bytes>
+            </session-length>
+          </unknown-tcp>
+          <unknown-udp>
+            <destinations-per-hour>10</destinations-per-hour>
+            <sessions-per-hour>10</sessions-per-hour>
+            <session-length>
+              <maximum-bytes>100</maximum-bytes>
+              <minimum-bytes>50</minimum-bytes>
+            </session-length>
+          </unknown-udp>
+        </unknown-applications>
+      </configuration>
+      <report>
+        <topn>100</topn>
+        <scheduled>yes</scheduled>
+      </report>
+    </botnet>
+    <tag>
+      <entry name="FP-REF-FW-TAG-SHARED">
+        <color>color1</color>
+        <comments>Shared firewall reference tag.</comments>
+      </entry>
+      <entry name="FP-REF-FW-TAG-INTERNET">
+        <color>color2</color>
+        <comments>Firewall internet edge reference tag.</comments>
+      </entry>
+      <entry name="FP-REF-FW-TAG-AUDIT">
+        <color>color3</color>
+        <comments>Firewall Policy Audit reference tag.</comments>
+      </entry>
+    </tag>
+    <address>
+      <entry name="FP-REF-FW-SHARED-ADDR-PUBLIC-203.0.113.20">
+        <ip-netmask>203.0.113.20</ip-netmask>
+        <description>Shared public documentation address for NAT examples.</description>
+        <tag>
+          <member>FP-REF-FW-TAG-INTERNET</member>
+        </tag>
+      </entry>
+      <entry name="FP-REF-FW-SHARED-ADDR-FQDN">
+        <fqdn>firewall-app.example.internal</fqdn>
+        <description>Shared firewall FQDN address object.</description>
+      </entry>
+    </address>
+    <address-group>
+      <entry name="FP-REF-FW-SHARED-AG-PUBLIC">
+        <static>
+          <member>FP-REF-FW-SHARED-ADDR-PUBLIC-203.0.113.20</member>
+        </static>
+        <description>Shared firewall address group example.</description>
+      </entry>
+    </address-group>
+  </shared>
+  <devices>
+    <entry name="localhost.localdomain">
+      <network>
+        <interface>
+          <ethernet>
+            <entry name="ethernet1/1">
+              <comment>FP reference untrust interface.</comment>
+              <layer3>
+                <ip>
+                  <entry name="203.0.113.22/30" />
+                </ip>
+                <interface-management-profile>FP-REF-FW-MGMT-PING-HTTPS</interface-management-profile>
+              </layer3>
+            </entry>
+            <entry name="ethernet1/2">
+              <comment>FP reference trust interface.</comment>
+              <layer3>
+                <ip>
+                  <entry name="10.60.10.1/24" />
+                </ip>
+              </layer3>
+            </entry>
+            <entry name="ethernet1/3">
+              <comment>FP reference DMZ interface.</comment>
+              <layer3>
+                <ip>
+                  <entry name="10.70.10.1/24" />
+                </ip>
+              </layer3>
+            </entry>
+            <entry name="ethernet1/4">
+              <comment>FP reference guest interface.</comment>
+              <layer3>
+                <ip>
+                  <entry name="10.80.10.1/24" />
+                </ip>
+              </layer3>
+            </entry>
+          </ethernet>
+          <loopback>
+            <units>
+              <entry name="loopback.10">
+                <comment>FP reference loopback interface.</comment>
+                <ip>
+                  <entry name="10.255.20.1/32" />
+                </ip>
+              </entry>
+            </units>
+          </loopback>
+          <tunnel>
+            <units>
+              <entry name="tunnel.20">
+                <comment>FP reference tunnel interface.</comment>
+                <ip>
+                  <entry name="169.254.20.1/30" />
+                </ip>
+              </entry>
+            </units>
+          </tunnel>
+        </interface>
+        <profiles>
+          <monitor-profile>
+            <entry name="default">
+              <interval>3</interval>
+              <threshold>5</threshold>
+              <action>wait-recover</action>
+            </entry>
+          </monitor-profile>
+          <interface-management-profile>
+            <entry name="FP-REF-FW-MGMT-PING-HTTPS">
+              <ping>yes</ping>
+              <https>yes</https>
+              <response-pages>no</response-pages>
+              <userid-service>no</userid-service>
+            </entry>
+          </interface-management-profile>
+        </profiles>
+        <ike>
+          <crypto-profiles>
+            <ike-crypto-profiles>
+              <entry name="default">
+                <encryption>
+                  <member>aes-128-cbc</member>
+                  <member>3des</member>
+                </encryption>
+                <hash>
+                  <member>sha1</member>
+                </hash>
+                <dh-group>
+                  <member>group2</member>
+                </dh-group>
+                <lifetime>
+                  <hours>8</hours>
+                </lifetime>
+              </entry>
+              <entry name="Suite-B-GCM-128">
+                <encryption>
+                  <member>aes-128-cbc</member>
+                </encryption>
+                <hash>
+                  <member>sha256</member>
+                </hash>
+                <dh-group>
+                  <member>group19</member>
+                </dh-group>
+                <lifetime>
+                  <hours>8</hours>
+                </lifetime>
+              </entry>
+              <entry name="Suite-B-GCM-256">
+                <encryption>
+                  <member>aes-256-cbc</member>
+                </encryption>
+                <hash>
+                  <member>sha384</member>
+                </hash>
+                <dh-group>
+                  <member>group20</member>
+                </dh-group>
+                <lifetime>
+                  <hours>8</hours>
+                </lifetime>
+              </entry>
+            </ike-crypto-profiles>
+            <ipsec-crypto-profiles>
+              <entry name="default">
+                <esp>
+                  <encryption>
+                    <member>aes-128-cbc</member>
+                    <member>3des</member>
+                  </encryption>
+                  <authentication>
+                    <member>sha1</member>
+                  </authentication>
+                </esp>
+                <dh-group>group2</dh-group>
+                <lifetime>
+                  <hours>1</hours>
+                </lifetime>
+              </entry>
+              <entry name="Suite-B-GCM-128">
+                <esp>
+                  <encryption>
+                    <member>aes-128-gcm</member>
+                  </encryption>
+                  <authentication>
+                    <member>none</member>
+                  </authentication>
+                </esp>
+                <dh-group>group19</dh-group>
+                <lifetime>
+                  <hours>1</hours>
+                </lifetime>
+              </entry>
+              <entry name="Suite-B-GCM-256">
+                <esp>
+                  <encryption>
+                    <member>aes-256-gcm</member>
+                  </encryption>
+                  <authentication>
+                    <member>none</member>
+                  </authentication>
+                </esp>
+                <dh-group>group20</dh-group>
+                <lifetime>
+                  <hours>1</hours>
+                </lifetime>
+              </entry>
+            </ipsec-crypto-profiles>
+            <global-protect-app-crypto-profiles>
+              <entry name="default">
+                <encryption>
+                  <member>aes-128-cbc</member>
+                </encryption>
+                <authentication>
+                  <member>sha1</member>
+                </authentication>
+              </entry>
+            </global-protect-app-crypto-profiles>
+          </crypto-profiles>
+        </ike>
+        <qos>
+          <profile>
+            <entry name="default">
+              <class-bandwidth-type>
+                <mbps>
+                  <class>
+                    <entry name="class1">
+                      <priority>real-time</priority>
+                    </entry>
+                    <entry name="class2">
+                      <priority>high</priority>
+                    </entry>
+                    <entry name="class3">
+                      <priority>high</priority>
+                    </entry>
+                    <entry name="class4">
+                      <priority>medium</priority>
+                    </entry>
+                    <entry name="class5">
+                      <priority>medium</priority>
+                    </entry>
+                    <entry name="class6">
+                      <priority>low</priority>
+                    </entry>
+                    <entry name="class7">
+                      <priority>low</priority>
+                    </entry>
+                    <entry name="class8">
+                      <priority>low</priority>
+                    </entry>
+                  </class>
+                </mbps>
+              </class-bandwidth-type>
+            </entry>
+          </profile>
+        </qos>
+        <virtual-router>
+          <entry name="default">
+            <protocol>
+              <bgp>
+                <enable>no</enable>
+                <dampening-profile>
+                  <entry name="default">
+                    <cutoff>1.25</cutoff>
+                    <reuse>0.5</reuse>
+                    <max-hold-time>900</max-hold-time>
+                    <decay-half-life-reachable>300</decay-half-life-reachable>
+                    <decay-half-life-unreachable>900</decay-half-life-unreachable>
+                    <enable>yes</enable>
+                  </entry>
+                </dampening-profile>
+              </bgp>
+            </protocol>
+            <interface>
+              <member>ethernet1/1</member>
+              <member>ethernet1/2</member>
+              <member>ethernet1/3</member>
+              <member>ethernet1/4</member>
+              <member>loopback.10</member>
+              <member>tunnel.20</member>
+            </interface>
+            <routing-table>
+              <ip>
+                <static-route>
+                  <entry name="FP-REF-FW-DEFAULT-ROUTE">
+                    <destination>0.0.0.0/0</destination>
+                    <interface>ethernet1/1</interface>
+                    <nexthop>
+                      <ip-address>203.0.113.21</ip-address>
+                    </nexthop>
+                  </entry>
+                  <entry name="FP-REF-FW-VPN-ROUTE">
+                    <destination>10.90.10.0/24</destination>
+                    <interface>tunnel.20</interface>
+                    <nexthop>
+                      <ip-address>169.254.20.2</ip-address>
+                    </nexthop>
+                  </entry>
+                </static-route>
+              </ip>
+            </routing-table>
+          </entry>
+        </virtual-router>
+        <logical-router />
+        <routing-profile>
+          <bgp name="default-bgp-rp">
+            <address-family-profile />
+            <dampening-profile />
+            <redistribution-profile />
+          </bgp>
+          <filters>
+            <route-maps />
+          </filters>
+          <bfd />
+        </routing-profile>
+      </network>
+      <deviceconfig>
+        <system>
+          <type>
+            <static />
+          </type>
+          <update-server>updates.paloaltonetworks.com</update-server>
+          <update-schedule>
+            <threats>
+              <recurring>
+                <weekly>
+                  <day-of-week>wednesday</day-of-week>
+                  <at>01:02</at>
+                  <action>download-only</action>
+                </weekly>
+              </recurring>
+            </threats>
+          </update-schedule>
+          <timezone>US/Eastern</timezone>
+          <service>
+            <disable-telnet>yes</disable-telnet>
+            <disable-http>yes</disable-http>
+          </service>
+          <device-telemetry>
+            <device-health-performance>yes</device-health-performance>
+            <product-usage>yes</product-usage>
+            <threat-prevention>yes</threat-prevention>
+            <region>Americas</region>
+          </device-telemetry>
+          <hostname>PA-VM</hostname>
+          <permitted-ip>
+            <entry name="192.168.76.0/24" />
+            <entry name="192.168.101.0/24" />
+          </permitted-ip>
+          <ip-address>192.168.76.71</ip-address>
+          <netmask>255.255.255.0</netmask>
+          <default-gateway>192.168.76.1</default-gateway>
+        </system>
+        <setting>
+          <config>
+            <rematch>yes</rematch>
+          </config>
+          <management>
+            <hostname-type-in-syslog>FQDN</hostname-type-in-syslog>
+            <quota-settings>
+              <disk-quota>
+                <alarm>3</alarm>
+                <appstat>4</appstat>
+                <trsum>7</trsum>
+                <thsum>2</thsum>
+                <hourlytrsum>3</hourlytrsum>
+                <hourlythsum>1</hourlythsum>
+                <gtpsum>1</gtpsum>
+                <hourlygtpsum>0.75</hourlygtpsum>
+                <dailygtpsum>0.75</dailygtpsum>
+                <weeklygtpsum>0.75</weeklygtpsum>
+                <sctpsum>0</sctpsum>
+                <hourlysctpsum>0</hourlysctpsum>
+                <dailysctpsum>0</dailysctpsum>
+                <weeklysctpsum>0</weeklysctpsum>
+                <hourlyurlsum>1</hourlyurlsum>
+                <dailytrsum>1</dailytrsum>
+                <dailythsum>1</dailythsum>
+                <dailyurlsum>1</dailyurlsum>
+                <weeklytrsum>1</weeklytrsum>
+                <weeklythsum>1</weeklythsum>
+                <weeklyurlsum>0.75</weeklyurlsum>
+                <hipmatch>3</hipmatch>
+                <globalprotect>1</globalprotect>
+                <dlp-logs>1</dlp-logs>
+                <application-pcaps>1</application-pcaps>
+                <threat-pcaps>1</threat-pcaps>
+                <urlsum>2</urlsum>
+                <debug-filter-pcaps>1</debug-filter-pcaps>
+                <iptag>1</iptag>
+                <hip-reports>1</hip-reports>
+                <userid>1</userid>
+                <auth>1</auth>
+                <gtp>2</gtp>
+                <hourlydesum>0</hourlydesum>
+                <dailydesum>0</dailydesum>
+                <weeklydesum>0</weeklydesum>
+                <desum>1</desum>
+                <decryption>1</decryption>
+                <sctp>0</sctp>
+                <traffic>29</traffic>
+                <threat>15</threat>
+                <config>4</config>
+                <system>4</system>
+              </disk-quota>
+            </quota-settings>
+          </management>
+          <auto-mac-detect>yes</auto-mac-detect>
+          <advance-routing>no</advance-routing>
+        </setting>
+      </deviceconfig>
+      <vsys>
+        <entry name="vsys1">
+          <application />
+          <application-group>
+            <entry name="FP-REF-FW-APP-GROUP-WEB">
+              <members>
+                <member>ssl</member>
+                <member>web-browsing</member>
+              </members>
+            </entry>
+          </application-group>
+          <zone>
+            <entry name="FP-REF-FW-ZONE-UNTRUST">
+              <network>
+                <layer3>
+                  <member>ethernet1/1</member>
+                </layer3>
+              </network>
+            </entry>
+            <entry name="FP-REF-FW-ZONE-TRUST">
+              <network>
+                <layer3>
+                  <member>ethernet1/2</member>
+                </layer3>
+              </network>
+            </entry>
+            <entry name="FP-REF-FW-ZONE-DMZ">
+              <network>
+                <layer3>
+                  <member>ethernet1/3</member>
+                </layer3>
+              </network>
+            </entry>
+            <entry name="FP-REF-FW-ZONE-GUEST">
+              <network>
+                <layer3>
+                  <member>ethernet1/4</member>
+                </layer3>
+              </network>
+            </entry>
+            <entry name="FP-REF-FW-ZONE-VPN">
+              <network>
+                <layer3>
+                  <member>tunnel.20</member>
+                  <member>loopback.10</member>
+                </layer3>
+              </network>
+            </entry>
+          </zone>
+          <service>
+            <entry name="FP-REF-FW-SVC-TCP-8443">
+              <protocol>
+                <tcp>
+                  <port>8443</port>
+                </tcp>
+              </protocol>
+              <description>Local TCP 8443 service.</description>
+              <tag>
+                <member>FP-REF-FW-TAG-AUDIT</member>
+              </tag>
+            </entry>
+            <entry name="FP-REF-FW-SVC-TCP-ALT-WEB">
+              <protocol>
+                <tcp>
+                  <port>8080,8081</port>
+                </tcp>
+              </protocol>
+              <description>Local alternate web service with multiple ports.</description>
+            </entry>
+            <entry name="FP-REF-FW-SVC-UDP-1194">
+              <protocol>
+                <udp>
+                  <port>1194</port>
+                </udp>
+              </protocol>
+              <description>Local UDP service.</description>
+            </entry>
+          </service>
+          <service-group>
+            <entry name="FP-REF-FW-SG-WEB">
+              <members>
+                <member>FP-REF-FW-SVC-TCP-8443</member>
+                <member>FP-REF-FW-SVC-TCP-ALT-WEB</member>
+                <member>service-http</member>
+                <member>service-https</member>
+              </members>
+            </entry>
+          </service-group>
+          <schedule />
+          <rulebase>
+            <security>
+              <rules>
+                <entry name="FP-REF-FW-ALLOW-USERS-TO-DMZ-WEB" uuid="363437df-971b-42a8-8e43-9cb1f743df12">
+                  <description>Local allow rule using App-ID, application-default, tags, and a URL category reference.</description>
+                  <from>
+                    <member>FP-REF-FW-ZONE-TRUST</member>
+                  </from>
+                  <to>
+                    <member>FP-REF-FW-ZONE-DMZ</member>
+                  </to>
+                  <source>
+                    <member>FP-REF-FW-ADDR-USERS-10.60.10.0_24</member>
+                  </source>
+                  <destination>
+                    <member>FP-REF-FW-AG-DMZ-SERVERS</member>
+                  </destination>
+                  <source-user>
+                    <member>any</member>
+                  </source-user>
+                  <category>
+                    <member>FP-REF-FW-URLCAT-EXAMPLE</member>
+                  </category>
+                  <application>
+                    <member>web-browsing</member>
+                    <member>ssl</member>
+                  </application>
+                  <service>
+                    <member>application-default</member>
+                  </service>
+                  <source-hip>
+                    <member>any</member>
+                  </source-hip>
+                  <destination-hip>
+                    <member>any</member>
+                  </destination-hip>
+                  <action>allow</action>
+                  <log-end>yes</log-end>
+                  <tag>
+                    <member>FP-REF-FW-TAG-AUDIT</member>
+                  </tag>
+                </entry>
+                <entry name="FP-REF-FW-DENY-GUEST-TO-DMZ" uuid="86775175-7b8a-430e-b77a-2ea06b4456ae">
+                  <description>Local deny rule for audit/parser examples.</description>
+                  <from>
+                    <member>FP-REF-FW-ZONE-GUEST</member>
+                  </from>
+                  <to>
+                    <member>FP-REF-FW-ZONE-DMZ</member>
+                  </to>
+                  <source>
+                    <member>FP-REF-FW-ADDR-GUEST-RANGE</member>
+                  </source>
+                  <destination>
+                    <member>FP-REF-FW-AG-DMZ-SERVERS</member>
+                  </destination>
+                  <source-user>
+                    <member>any</member>
+                  </source-user>
+                  <category>
+                    <member>any</member>
+                  </category>
+                  <application>
+                    <member>any</member>
+                  </application>
+                  <service>
+                    <member>any</member>
+                  </service>
+                  <source-hip>
+                    <member>any</member>
+                  </source-hip>
+                  <destination-hip>
+                    <member>any</member>
+                  </destination-hip>
+                  <action>deny</action>
+                  <log-end>yes</log-end>
+                  <tag>
+                    <member>FP-REF-FW-TAG-AUDIT</member>
+                  </tag>
+                </entry>
+                <entry name="FP-REF-FW-DISABLED-ALLOW-EXAMPLE" uuid="a35401e4-a6ba-4f9d-b2de-ed8570c1a32f">
+                  <description>Disabled local allow rule for parser disabled-state tests.</description>
+                  <disabled>yes</disabled>
+                  <from>
+                    <member>FP-REF-FW-ZONE-TRUST</member>
+                  </from>
+                  <to>
+                    <member>FP-REF-FW-ZONE-DMZ</member>
+                  </to>
+                  <source>
+                    <member>any</member>
+                  </source>
+                  <destination>
+                    <member>FP-REF-FW-ADDR-DMZ-API-10.70.10.20</member>
+                  </destination>
+                  <source-user>
+                    <member>any</member>
+                  </source-user>
+                  <category>
+                    <member>any</member>
+                  </category>
+                  <application>
+                    <member>ssl</member>
+                  </application>
+                  <service>
+                    <member>FP-REF-FW-SVC-TCP-8443</member>
+                  </service>
+                  <source-hip>
+                    <member>any</member>
+                  </source-hip>
+                  <destination-hip>
+                    <member>any</member>
+                  </destination-hip>
+                  <action>allow</action>
+                  <log-end>yes</log-end>
+                </entry>
+                <entry name="FP-REF-FW-DROP-CLEANUP" uuid="02d9eb71-1be0-4371-9919-fe728cb6a65f">
+                  <description>Explicit local cleanup drop rule.</description>
+                  <from>
+                    <member>any</member>
+                  </from>
+                  <to>
+                    <member>any</member>
+                  </to>
+                  <source>
+                    <member>any</member>
+                  </source>
+                  <destination>
+                    <member>any</member>
+                  </destination>
+                  <source-user>
+                    <member>any</member>
+                  </source-user>
+                  <category>
+                    <member>any</member>
+                  </category>
+                  <application>
+                    <member>any</member>
+                  </application>
+                  <service>
+                    <member>any</member>
+                  </service>
+                  <source-hip>
+                    <member>any</member>
+                  </source-hip>
+                  <destination-hip>
+                    <member>any</member>
+                  </destination-hip>
+                  <action>drop</action>
+                  <log-end>yes</log-end>
+                </entry>
+              </rules>
+            </security>
+            <nat>
+              <rules>
+                <entry name="FP-REF-FW-SOURCE-NAT-USERS" uuid="72ac90c7-3e5c-42ba-bc62-5fd466b0d9f3">
+                  <description>Local source NAT example.</description>
+                  <from>
+                    <member>FP-REF-FW-ZONE-TRUST</member>
+                  </from>
+                  <to>
+                    <member>FP-REF-FW-ZONE-UNTRUST</member>
+                  </to>
+                  <to-interface>any</to-interface>
+                  <source>
+                    <member>FP-REF-FW-ADDR-USERS-10.60.10.0_24</member>
+                  </source>
+                  <destination>
+                    <member>any</member>
+                  </destination>
+                  <service>any</service>
+                  <source-translation>
+                    <dynamic-ip-and-port>
+                      <translated-address>
+                        <member>FP-REF-FW-SHARED-ADDR-PUBLIC-203.0.113.20</member>
+                      </translated-address>
+                    </dynamic-ip-and-port>
+                  </source-translation>
+                </entry>
+                <entry name="FP-REF-FW-DEST-NAT-WEB" uuid="9d7afefe-b365-4333-8aa9-cba3cba809ee">
+                  <description>Local destination NAT example.</description>
+                  <from>
+                    <member>FP-REF-FW-ZONE-UNTRUST</member>
+                  </from>
+                  <to>
+                    <member>FP-REF-FW-ZONE-UNTRUST</member>
+                  </to>
+                  <to-interface>any</to-interface>
+                  <source>
+                    <member>any</member>
+                  </source>
+                  <destination>
+                    <member>FP-REF-FW-SHARED-ADDR-PUBLIC-203.0.113.20</member>
+                  </destination>
+                  <service>service-https</service>
+                  <destination-translation>
+                    <translated-address>10.70.10.10</translated-address>
+                    <translated-port>443</translated-port>
+                  </destination-translation>
+                </entry>
+              </rules>
+            </nat>
+          </rulebase>
+          <import>
+            <network>
+              <interface>
+                <member>ethernet1/1</member>
+                <member>ethernet1/2</member>
+                <member>ethernet1/3</member>
+                <member>ethernet1/4</member>
+                <member>loopback.10</member>
+                <member>tunnel.20</member>
+              </interface>
+            </network>
+          </import>
+          <tag>
+            <entry name="FP-REF-FW-TAG-TRUST">
+              <color>color4</color>
+              <comments>Trust zone local object tag.</comments>
+            </entry>
+            <entry name="FP-REF-FW-TAG-DMZ">
+              <color>color5</color>
+              <comments>DMZ local object tag.</comments>
+            </entry>
+            <entry name="FP-REF-FW-TAG-OVERRIDE">
+              <color>color6</color>
+              <comments>Local object same-name reference tag.</comments>
+            </entry>
+          </tag>
+          <address>
+            <entry name="FP-REF-FW-ADDR-USERS-10.60.10.0_24">
+              <ip-netmask>10.60.10.0/24</ip-netmask>
+              <description>Local user subnet for standalone firewall parsing.</description>
+              <tag>
+                <member>FP-REF-FW-TAG-TRUST</member>
+              </tag>
+            </entry>
+            <entry name="FP-REF-FW-ADDR-DMZ-WEB-10.70.10.10">
+              <ip-netmask>10.70.10.10</ip-netmask>
+              <description>Local DMZ web host.</description>
+              <tag>
+                <member>FP-REF-FW-TAG-DMZ</member>
+              </tag>
+            </entry>
+            <entry name="FP-REF-FW-ADDR-DMZ-API-10.70.10.20">
+              <ip-netmask>10.70.10.20</ip-netmask>
+              <description>Local DMZ API host.</description>
+              <tag>
+                <member>FP-REF-FW-TAG-DMZ</member>
+              </tag>
+            </entry>
+            <entry name="FP-REF-FW-ADDR-GUEST-RANGE">
+              <ip-range>10.80.10.50-10.80.10.99</ip-range>
+              <description>Local guest IP range.</description>
+            </entry>
+            <entry name="FP-REF-FW-ADDR-FQDN-SERVICE">
+              <fqdn>service.example.internal</fqdn>
+              <description>Local FQDN address object.</description>
+            </entry>
+          </address>
+          <address-group>
+            <entry name="FP-REF-FW-AG-DMZ-SERVERS">
+              <static>
+                <member>FP-REF-FW-ADDR-DMZ-WEB-10.70.10.10</member>
+                <member>FP-REF-FW-ADDR-DMZ-API-10.70.10.20</member>
+              </static>
+              <description>Static DMZ server group.</description>
+            </entry>
+            <entry name="FP-REF-FW-AG-DYNAMIC-DMZ">
+              <dynamic>
+                <filter>'FP-REF-FW-TAG-DMZ'</filter>
+              </dynamic>
+              <description>Dynamic address group selected by local tag.</description>
+            </entry>
+          </address-group>
+          <profiles>
+            <custom-url-category>
+              <entry name="FP-REF-FW-URLCAT-EXAMPLE" uuid="8df52373-907d-4844-a3c1-7cabffbe2579">
+                <type>URL List</type>
+                <list>
+                  <member>example.com</member>
+                  <member>*.example.internal</member>
+                </list>
+                <description>Local URL category for parser reference.</description>
+              </entry>
+            </custom-url-category>
+          </profiles>
+        </entry>
+      </vsys>
+    </entry>
+  </devices>
+</config>

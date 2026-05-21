@@ -75,6 +75,15 @@ Use these product terms consistently in code and UI:
 - Add tests for parser, resolver, policy matching, policy audit, and plan
   behavior as those areas evolve.
 - Prefer explicit warnings and limitations over generated guesses.
+- Use the project virtual environment for local commands:
+  `.venv/bin/python -m pytest`, `.venv/bin/python -m ruff`, and
+  `.venv/bin/python -m frying_pan.cli.main ...`.
+- For GUI validation in headless environments, prefer
+  `QT_QPA_PLATFORM=offscreen .venv/bin/python -m pytest ...`.
+- When PAN-OS or Panorama logic is encoded in code, add a concise source note
+  near the logic or in `docs/panos-xml-notes.md` with the official Palo Alto
+  Networks documentation URL used. If the behavior is inferred from lab XML or
+  unclear documentation, add a `TODO:` with that uncertainty.
 
 ## Phase and Task Execution
 
