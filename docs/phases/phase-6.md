@@ -1,6 +1,6 @@
 # Phase 6: Migrate Plan
 
-Status: planned
+Status: complete
 
 ## Goal
 
@@ -63,11 +63,30 @@ Use these statuses consistently:
 
 A Task cannot be marked complete unless its validation criteria are satisfied.
 
+## Phase 6 Validation Evidence
+
+- `pytest -q` passed with 79 tests.
+- `ruff check .` passed.
+- Existing CLI commands still worked against fixtures.
+- CLI `migrate-plan` worked against source and target firewall fixtures.
+- Migration GUI/model tests passed offscreen.
+- Migration Markdown export tests passed.
+- `docs/migrate-plan-notes.md` was created with official Palo Alto Networks
+  references and current staging/assurance/export limitations.
+- Source and target XML mutation remain blocked.
+
 ## Tasks
 
 ### Task 6.1: Migration Behavior Notes
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- `docs/migrate-plan-notes.md` created and aligned to implemented staged
+  migration behavior.
+- `pytest -q` passed with 79 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -94,7 +113,15 @@ Completion Criteria:
 
 ### Task 6.2: Migration Plan Model
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- `MigrationPlan`, staged decisions, validation, preview, dependency, mapping,
+  and assurance result fields implemented.
+- Tests cover plan serialization and computed counts.
+- `pytest -q` passed with 79 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -120,7 +147,15 @@ Completion Criteria:
 
 ### Task 6.3: Source And Target Workspace Binding
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- `MigrationWorkflow.create_plan_from_configs()` binds source and target
+  normalized configs with IDs and source types.
+- Tests cover source and target fixture binding.
+- `pytest -q` passed with 79 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -146,7 +181,14 @@ Completion Criteria:
 
 ### Task 6.4: Scope Mapping
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Scope mapping model and staging helper implemented.
+- Tests cover valid mappings and missing scope validation errors.
+- `pytest -q` passed with 79 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -171,7 +213,14 @@ Completion Criteria:
 
 ### Task 6.5: Zone Mapping
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Zone mapping model and staging helper implemented without route inference.
+- Tests cover explicit one-to-one zone mapping through workflow validation.
+- `pytest -q` passed with 79 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -196,7 +245,15 @@ Completion Criteria:
 
 ### Task 6.6: Object Mapping
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Object mapping model supports copy, reuse-existing, rename-and-copy, merge,
+  and skip modes.
+- Tests cover required target validation and source/target object validation.
+- `pytest -q` passed with 79 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -223,7 +280,14 @@ Completion Criteria:
 
 ### Task 6.7: Rule Placement Mapping
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Rule placement mapping supports append and anchored modes.
+- Tests cover append placement and required anchor validation.
+- `pytest -q` passed with 79 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -249,7 +313,15 @@ Completion Criteria:
 
 ### Task 6.8: Dependency Inclusion And Conflict Handling
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Dependency inclusion helper records parsed dependencies as staged decisions.
+- Validation surfaces unresolved source dependencies.
+- Tests cover dependency inclusion.
+- `pytest -q` passed with 79 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -277,7 +349,15 @@ Completion Criteria:
 
 ### Task 6.9: Policy Assurance Integration
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Migration workflow can compare source and target Policy Tester behavior for
+  operator-provided flows.
+- Tests cover unchanged assurance comparison and conservative warning behavior.
+- `pytest -q` passed with 79 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -304,7 +384,15 @@ Completion Criteria:
 
 ### Task 6.10: Migration Preview And Diff Model
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- `MigrationPlanPreview` summarizes decisions, dependencies, assurance results,
+  warnings, and XML export-blocked state.
+- Tests cover preview generation.
+- `pytest -q` passed with 79 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -330,7 +418,16 @@ Completion Criteria:
 
 ### Task 6.11: CLI Migrate Plan Command
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- `frying-pan migrate-plan` added with scope, zone, object, rule placement,
+  dependency inclusion, JSON output, and Markdown report output.
+- CLI migrate-plan worked against source and target firewall fixtures.
+- `tests/test_cli_inventory.py` covers JSON and Markdown output.
+- `pytest -q` passed with 79 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -356,7 +453,15 @@ Completion Criteria:
 
 ### Task 6.12: GUI Migrate Workspace
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Migrate GUI now displays staged plan summary and mapping table from core
+  models.
+- `tests/test_gui_migrate.py` passed offscreen.
+- `pytest -q` passed with 79 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -382,7 +487,15 @@ Completion Criteria:
 
 ### Task 6.13: Migration Report Export
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Migration plans serialize to JSON through Pydantic models.
+- Markdown export added in `frying_pan/export/migration_plan_exporter.py`.
+- Migration report export tests passed.
+- `pytest -q` passed with 79 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -409,7 +522,17 @@ Completion Criteria:
 
 ### Task 6.14: Final Phase 6 Validation
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- `pytest -q` passed with 79 tests.
+- `ruff check .` passed.
+- Existing CLI commands still worked against fixtures.
+- CLI migrate-plan worked against source and target firewall fixtures.
+- Migration GUI/model and report export tests passed.
+- `docs/migrate-plan-notes.md` and roadmap references were updated.
+- Source and target XML mutation remain blocked.
 
 Goal:
 

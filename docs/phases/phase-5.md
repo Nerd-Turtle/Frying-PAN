@@ -1,6 +1,6 @@
 # Phase 5: Modify Plan
 
-Status: planned
+Status: complete
 
 ## Goal
 
@@ -61,11 +61,30 @@ Use these statuses consistently:
 
 A Task cannot be marked complete unless its validation criteria are satisfied.
 
+## Phase 5 Validation Evidence
+
+- `pytest -q` passed with 72 tests.
+- `ruff check .` passed.
+- Existing CLI commands still worked against fixtures.
+- CLI `modify-plan` worked against the firewall fixture.
+- Modify GUI/model tests passed offscreen.
+- Modify Markdown export tests passed.
+- `docs/modify-plan-notes.md` was created with official Palo Alto Networks
+  references and current staging/export limitations.
+- Source XML mutation remains blocked.
+
 ## Tasks
 
 ### Task 5.1: Modify Behavior Notes
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- `docs/modify-plan-notes.md` created and aligned to implemented staged-plan
+  behavior.
+- `pytest -q` passed with 72 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -91,7 +110,15 @@ Completion Criteria:
 
 ### Task 5.2: Modify Plan Model
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- `ModificationPlan`, plan status, validation, warnings, notes, and computed
+  counts implemented.
+- Tests cover plan serialization and computed action counts.
+- `pytest -q` passed with 72 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -118,7 +145,15 @@ Completion Criteria:
 
 ### Task 5.3: Modify Action Model
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Staged action models support rename, dedupe, move, reorder, and rule metadata
+  changes.
+- Invalid action shape validation is tested.
+- `pytest -q` passed with 72 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -145,7 +180,15 @@ Completion Criteria:
 
 ### Task 5.4: Plan Validation And Dependency Checks
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Plan validation checks duplicate staged sources, missing source objects,
+  action warnings, and unresolved imported references.
+- Tests cover valid and blocked plans.
+- `pytest -q` passed with 72 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -172,7 +215,15 @@ Completion Criteria:
 
 ### Task 5.5: Object Rename Staging
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Object rename staging records source/target references and impacted parsed
+  references.
+- Tests cover rename staging and impacted reference listing.
+- `pytest -q` passed with 72 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -200,7 +251,15 @@ Completion Criteria:
 
 ### Task 5.6: Object Dedupe Staging
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Object dedupe staging records duplicate and canonical object references plus
+  impacted references.
+- Tests cover dedupe action creation.
+- `pytest -q` passed with 72 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -226,7 +285,15 @@ Completion Criteria:
 
 ### Task 5.7: Object Move Staging
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Object move staging validates target scope existence, target object conflicts,
+  and Panorama inheritance/override review warnings.
+- Tests cover object move staging.
+- `pytest -q` passed with 72 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -252,7 +319,15 @@ Completion Criteria:
 
 ### Task 5.8: Rule Reorder And Metadata Staging
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Rule reorder and rule metadata staging implemented inside existing scope and
+  rulebase context.
+- Tests cover same-rulebase reorder and enabled/logging metadata staging.
+- `pytest -q` passed with 72 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -279,7 +354,15 @@ Completion Criteria:
 
 ### Task 5.9: Preview And Diff Model
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- `ModifyPlanPreview` summarizes staged actions and impacted references while
+  keeping XML export blocked.
+- Tests cover preview generation and export-blocked state.
+- `pytest -q` passed with 72 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -305,7 +388,16 @@ Completion Criteria:
 
 ### Task 5.10: CLI Modify Plan Command
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- `frying-pan modify-plan` added with staged rename, move, dedupe, reorder,
+  JSON output, and Markdown report output.
+- CLI modify-plan worked against the firewall fixture.
+- `tests/test_cli_inventory.py` covers JSON and Markdown output.
+- `pytest -q` passed with 72 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -332,7 +424,14 @@ Completion Criteria:
 
 ### Task 5.11: GUI Modify Workspace
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Modify GUI now displays staged plan summary and action table from core models.
+- `tests/test_gui_modify.py` passed offscreen.
+- `pytest -q` passed with 72 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -358,7 +457,15 @@ Completion Criteria:
 
 ### Task 5.12: Modify Report Export
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Modify plans serialize to JSON through Pydantic models.
+- Markdown export added in `frying_pan/export/modify_plan_exporter.py`.
+- Modify report export tests passed.
+- `pytest -q` passed with 72 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -385,7 +492,17 @@ Completion Criteria:
 
 ### Task 5.13: Final Phase 5 Validation
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- `pytest -q` passed with 72 tests.
+- `ruff check .` passed.
+- Existing CLI commands still worked against fixtures.
+- CLI modify-plan worked against the firewall fixture.
+- Modify GUI/model and report export tests passed.
+- `docs/modify-plan-notes.md` and roadmap references were updated.
+- Source XML mutation remains blocked.
 
 Goal:
 

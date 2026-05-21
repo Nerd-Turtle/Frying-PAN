@@ -1,0 +1,84 @@
+{
+  "name": "Generic Conversion Fixture",
+  "source_id": "generic-fixture",
+  "metadata": {
+    "vendor": "generic"
+  },
+  "scopes": [
+    {
+      "name": "converted",
+      "scope_type": "synthetic_vendor",
+      "path": "converted"
+    }
+  ],
+  "addresses": [
+    {
+      "name": "GEN-HOST-A",
+      "scope_path": "converted",
+      "type": "ip-netmask",
+      "value": "10.1.1.10"
+    },
+    {
+      "name": "GEN-NET-B",
+      "scope_path": "converted",
+      "type": "ip-netmask",
+      "value": "10.2.0.0/24"
+    }
+  ],
+  "address_groups": [
+    {
+      "name": "GEN-GROUP",
+      "scope_path": "converted",
+      "members": ["GEN-HOST-A", "GEN-MISSING"],
+      "dynamic_filter": "tag eq example"
+    }
+  ],
+  "services": [
+    {
+      "name": "GEN-SVC-HTTPS",
+      "scope_path": "converted",
+      "protocol": "tcp",
+      "destination": "443"
+    },
+    {
+      "name": "GEN-SVC-BAD",
+      "scope_path": "converted",
+      "protocol": "gre",
+      "destination": "0"
+    }
+  ],
+  "service_groups": [
+    {
+      "name": "GEN-SG-WEB",
+      "scope_path": "converted",
+      "members": ["GEN-SVC-HTTPS"]
+    }
+  ],
+  "tags": [
+    {
+      "name": "GEN-TAG",
+      "scope_path": "converted",
+      "color": "color1"
+    }
+  ],
+  "security_rules": [
+    {
+      "name": "GEN-ALLOW-WEB",
+      "scope_path": "converted",
+      "rulebase_type": "security_local",
+      "position": 1,
+      "source_zones": ["trust"],
+      "destination_zones": ["untrust"],
+      "source_addresses": ["GEN-HOST-A"],
+      "destination_addresses": ["GEN-NET-B"],
+      "applications": ["ssl"],
+      "services": ["GEN-SVC-HTTPS"],
+      "users": ["any"],
+      "url_categories": ["any"],
+      "action": "allow",
+      "unsupported_criteria": {
+        "schedule": "work-hours"
+      }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # Phase 7: Convert Framework
 
-Status: planned
+Status: complete
 
 ## Goal
 
@@ -66,7 +66,7 @@ A Task cannot be marked complete unless its validation criteria are satisfied.
 
 ### Task 7.1: Conversion Behavior Notes
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -94,7 +94,7 @@ Completion Criteria:
 
 ### Task 7.2: Normalized Import Package Schema
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -120,7 +120,7 @@ Completion Criteria:
 
 ### Task 7.3: Conversion Warning Model
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -147,7 +147,7 @@ Completion Criteria:
 
 ### Task 7.4: Vendor Adapter Contract
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -173,7 +173,7 @@ Completion Criteria:
 
 ### Task 7.5: Generic CSV/JSON Adapter
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -200,7 +200,7 @@ Completion Criteria:
 
 ### Task 7.6: Palo-Compatible Object Normalization
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -226,7 +226,7 @@ Completion Criteria:
 
 ### Task 7.7: Palo-Compatible Rule Normalization
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -256,7 +256,7 @@ Completion Criteria:
 
 ### Task 7.8: Validation And Gap Reporting
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -283,7 +283,7 @@ Completion Criteria:
 
 ### Task 7.9: Convert Plan Model Integration
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -308,7 +308,7 @@ Completion Criteria:
 
 ### Task 7.10: CLI Convert Command
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -335,7 +335,7 @@ Completion Criteria:
 
 ### Task 7.11: GUI Convert Workspace
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -361,7 +361,7 @@ Completion Criteria:
 
 ### Task 7.12: Conversion Report Export
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -388,7 +388,7 @@ Completion Criteria:
 
 ### Task 7.13: Final Phase 7 Validation
 
-Status: planned
+Status: complete
 
 Goal:
 
@@ -412,6 +412,41 @@ Completion Criteria:
 - Every Phase 7 Task is complete.
 - Full Phase 7 validation suite passes.
 - Validation evidence is recorded.
+
+## Phase 7 Validation Evidence
+
+Final validation performed:
+
+- `.venv/bin/python -m pytest -q` passed with 88 tests.
+- `.venv/bin/python -m ruff check .` passed.
+- `convert` CLI produced JSON and Markdown reports from
+  `tests/fixtures/vendor_future/generic_import.json`.
+- Existing CLI commands for `inventory`, `policy-test`, `policy-audit`,
+  `dedupe-analysis`, `modify-plan`, and `migrate-plan` remained covered by
+  `tests/test_cli_inventory.py`.
+- Offscreen Convert GUI construction and package display passed in
+  `tests/test_gui_convert.py`.
+- Conversion report export passed in `tests/test_conversion_report_exporter.py`.
+- `docs/convert-framework-notes.md` documents framework behavior, limitations,
+  and the XML export boundary.
+
+Task validation evidence:
+
+| Task | Evidence |
+|---|---|
+| 7.1 | `docs/convert-framework-notes.md` created and aligned with implemented Convert terminology and XML export limits. |
+| 7.2 | `ConvertedImportPackage` and `ConversionPackageValidation` serialize through Pydantic JSON and are covered by `tests/test_conversion_plan_model.py`. |
+| 7.3 | `ConversionWarning` includes severity, source field, normalized target, and suggested review fields with serialization coverage. |
+| 7.4 | `ConversionAdapter` contract and fake adapter test cover future offline adapter implementation shape. |
+| 7.5 | Generic JSON adapter converts the `vendor_future/generic_import.json` fixture and emits warnings/unsupported records. |
+| 7.6 | Generic JSON object normalization covers address objects, address groups, services, service groups, and tags. |
+| 7.7 | Generic JSON rule normalization covers deterministic security rule conversion and unsupported criteria preservation. |
+| 7.8 | Package validation covers missing scopes, duplicate entities, unresolved references, and unsupported feature summaries. |
+| 7.9 | `ConversionWorkflow.create_plan_from_package` propagates package warnings into a review decision. |
+| 7.10 | CLI `convert` JSON and Markdown report behavior is covered by `tests/test_cli_inventory.py`. |
+| 7.11 | Convert GUI source, warning table, and package preview display are covered by `tests/test_gui_convert.py`. |
+| 7.12 | Markdown conversion report export is covered by `tests/test_conversion_report_exporter.py`. |
+| 7.13 | Full project `pytest` and `ruff` validation passed; source XML mutation remains blocked. |
 
 ## Phase 7 Completion Rules
 

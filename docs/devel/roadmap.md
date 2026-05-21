@@ -32,13 +32,19 @@ validation recorded in the phase document. Phase 2, Policy Tester v1, is
 complete based on the validation recorded in the phase document. Phase 3,
 Policy Audit v1, is complete based on the validation recorded in the phase
 document. Phase 4, Dedupe and Conflict Analysis, is complete based on the
-validation recorded in the phase document.
+validation recorded in the phase document. Phase 5, Modify Plan, is complete
+based on the validation recorded in the phase document. Phase 6, Migrate Plan,
+is complete based on the validation recorded in the phase document. Phase 7,
+Convert Framework, is complete based on the validation recorded in the phase
+document.
 
 The project currently has a desktop shell, CLI inventory commands, local
 workspace model, source detection, Phase 1 PAN-OS inventory parsers, normalized
 models, reference/dependency foundations, report generation, conservative
 single-flow policy testing, structured policy audit findings, plan model
-skeletons, dedupe/conflict analysis, and tests. XML mutation/export remains
+skeletons, dedupe/conflict analysis, staged Modify planning, and tests. XML
+mutation/export remains blocked. Migration planning and generic conversion
+package generation are staged and reportable, but production XML export remains
 blocked.
 
 ## Phase and Task Model
@@ -66,9 +72,9 @@ documentation updates are complete.
 | 2 | Policy Tester v1 | Complete | [phase-2.md](../phases/phase-2.md) | Evaluate a single test flow with conservative first-match behavior, trace output, later matches, and warnings. |
 | 3 | Policy Audit v1 | Complete | [phase-3.md](../phases/phase-3.md) | Analyze full rulebases for obvious shadows, duplicate rules, broad allows, missing references, and App-ID/service uncertainty. |
 | 4 | Dedupe and Conflict Analysis | Complete | [phase-4.md](../phases/phase-4.md) | Detect duplicate objects/services, same-name conflicts, unused candidates, and object placement recommendations. |
-| 5 | Modify Plan | Planned | [phase-5.md](../phases/phase-5.md) | Stage object/rule modification decisions and generate modification reports without mutating XML. |
-| 6 | Migrate Plan | Planned | [phase-6.md](../phases/phase-6.md) | Stage source-to-target scope, object, zone, and rule mappings with dependency inclusion and policy assurance. |
-| 7 | Convert Framework | Planned | [phase-7.md](../phases/phase-7.md) | Define normalized import packages, conversion warnings, and future vendor adapters. |
+| 5 | Modify Plan | Complete | [phase-5.md](../phases/phase-5.md) | Stage object/rule modification decisions and generate modification reports without mutating XML. |
+| 6 | Migrate Plan | Complete | [phase-6.md](../phases/phase-6.md) | Stage source-to-target scope, object, zone, and rule mappings with dependency inclusion and policy assurance. |
+| 7 | Convert Framework | Complete | [phase-7.md](../phases/phase-7.md) | Define normalized import packages, conversion warnings, and future vendor adapters. |
 
 ## Phase 0: Foundation
 
@@ -227,7 +233,7 @@ Validation evidence is recorded in
 
 ## Phase 5: Modify Plan
 
-Status: Planned
+Status: Complete
 
 Detail:
 
@@ -239,9 +245,24 @@ Stage single-configuration modification actions such as dedupe, rename, object
 move, and rule reorder decisions. Generate modification reports. Do not export
 mutated XML until serializer validation exists.
 
+Completed scope:
+
+- Structured Modify plan, action, validation, and preview models.
+- Staged object rename, dedupe, move, rule reorder, and simple rule metadata
+  decisions.
+- Validation for missing source objects, duplicate staged sources, target
+  conflicts, unresolved references, and scope review warnings.
+- CLI `modify-plan` command with text, JSON, and Markdown report output.
+- Modify GUI summary and staged action table backed by core models.
+- Modify plan Markdown report export.
+- Modify behavior notes with official Palo Alto Networks references.
+
+Validation evidence is recorded in
+[docs/phases/phase-5.md](../phases/phase-5.md).
+
 ## Phase 6: Migrate Plan
 
-Status: Planned
+Status: Complete
 
 Detail:
 
@@ -253,9 +274,24 @@ Stage migration decisions between Palo Alto sources and targets, including
 scope mapping, object mapping, zone mapping, rule placement, dependency
 inclusion, and policy assurance before export.
 
+Completed scope:
+
+- Structured Migration plan, mapping, validation, preview, and assurance models.
+- Source and target normalized config binding.
+- Scope, zone, object, and rule placement staging.
+- Dependency inclusion staging from parsed dependency records.
+- Policy assurance comparison for operator-provided test flows.
+- CLI `migrate-plan` command with text, JSON, and Markdown report output.
+- Migrate GUI summary and mapping table backed by core models.
+- Migration plan Markdown report export.
+- Migration behavior notes with official Palo Alto Networks references.
+
+Validation evidence is recorded in
+[docs/phases/phase-6.md](../phases/phase-6.md).
+
 ## Phase 7: Convert Framework
 
-Status: Planned
+Status: Complete
 
 Detail:
 
@@ -266,6 +302,24 @@ Goal:
 Define normalized import package structure and conversion warning models so
 future FortiGate, ASA, CSV, JSON, or other vendor adapters can feed Modify or
 Migrate workflows without directly mutating Panorama XML.
+
+Completed scope:
+
+- Structured converted import package, package validation, warning, and
+  unsupported feature models.
+- Offline adapter contract for future vendor/local-file adapters.
+- Generic JSON adapter proving scopes, address objects, address groups,
+  services, service groups, tags, and security rules can normalize into the
+  internal model.
+- Reference and dependency extraction for converted packages.
+- Convert plan creation from converted packages with warning propagation.
+- CLI `convert` command with text, JSON, and Markdown report output.
+- Convert GUI source, warning, unsupported feature, and normalized package
+  summary display backed by core workflow models.
+- Convert framework notes documenting limitations and XML export boundaries.
+
+Validation evidence is recorded in
+[docs/phases/phase-7.md](../phases/phase-7.md).
 
 ## Completion Rules
 

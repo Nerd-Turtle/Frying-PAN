@@ -133,3 +133,94 @@ def test_cli_dedupe_analysis_json_and_markdown_report(tmp_path: Path, capsys) ->
     assert "Frying-PAN Dedupe And Conflict Analysis" in report_path.read_text(
         encoding="utf-8"
     )
+
+
+def test_cli_modify_plan_json_and_markdown_report(tmp_path: Path, capsys) -> None:
+    report_path = tmp_path / "modify.md"
+    result = main(
+        [
+            "modify-plan",
+            str(FIXTURES / "firewall" / "reference_config_items_virtual_router.xml"),
+            "--reorder-rule",
+            "vsys/vsys1",
+            "security_local",
+            "FP-REF-FW-DROP-CLEANUP",
+            "1",
+            "--json",
+            "--report-md",
+            str(report_path),
+        ]
+    )
+
+    captured = capsys.readouterr()
+
+    assert result == 0
+    assert '"action_count": 1' in captured.out
+    assert "reorder_rule" in captured.out
+    assert "Frying-PAN Modify Plan" in report_path.read_text(encoding="utf-8")
+
+
+def test_cli_migrate_plan_json_and_markdown_report(tmp_path: Path, capsys) -> None:
+    report_path = tmp_path / "migration.md"
+    fixture = FIXTURES / "firewall" / "reference_config_items_virtual_router.xml"
+    result = main(
+        [
+            "migrate-plan",
+            str(fixture),
+            str(fixture),
+            "--map-scope",
+            "vsys/vsys1",
+            "vsys/vsys1",
+            "--place-rule",
+            "vsys/vsys1::security_local::FP-REF-FW-ALLOW-USERS-TO-DMZ-WEB",
+            "vsys/vsys1::security_local",
+            "append",
+            "--json",
+            "--report-md",
+            str(report_path),
+        ]
+    )
+
+    captured = capsys.readouterr()
+
+    assert result == 0
+    assert '"mapping_count": 2' in captured.out
+    assert "place_rule" in captured.out
+    assert "Frying-PAN Migration Plan" in report_path.read_text(encoding="utf-8")
+
+
+def test_cli_convert_json_and_markdown_report(tmp_path: Path, capsys) -> None:
+    report_path = tmp_path / "conversion.md"
+    result = main(
+        [
+            "convert",
+            str(FIXTURES / "vendor_future" / "generic_import.json"),
+            "--format",
+            "generic-json",
+            "--json",
+            "--report-md",
+            str(report_path),
+        ]
+    )
+
+    captured = capsys.readouterr()
+
+    assert result == 0
+    assert '"source_format": "generic-json"' in captured.out
+    assert '"security_rule_count": 1' in captured.out
+    assert "dynamic_address_group" in captured.out
+    assert "Frying-PAN Conversion Report" in report_path.read_text(encoding="utf-8")
+
+
+def test_cli_convert_returns_nonzero_for_invalid_package(
+    tmp_path: Path, capsys
+) -> None:
+    source_path = tmp_path / "invalid.json"
+    source_path.write_text("{}", encoding="utf-8")
+
+    result = main(["convert", str(source_path)])
+
+    captured = capsys.readouterr()
+
+    assert result == 1
+    assert "at least one scope" in captured.err
