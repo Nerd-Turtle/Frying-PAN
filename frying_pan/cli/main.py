@@ -5,8 +5,10 @@ import sys
 from pathlib import Path
 
 from frying_pan.analysis.inventory import summarize_inventory
+from frying_pan.export.policy_audit_exporter import export_policy_audit_markdown
 from frying_pan.export.policy_test_exporter import export_policy_test_markdown
 from frying_pan.export.report_exporter import export_inventory_markdown
+from frying_pan.policy.audit.audit_engine import PolicyAuditEngine
 from frying_pan.policy.match.match_engine import PolicyMatchEngine
 from frying_pan.policy.match.test_case import PolicyTestCase
 from frying_pan.sources.detection import detect_source
@@ -60,6 +62,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     policy_test_parser.add_argument(
         "--report-md", type=Path, help="Write a Markdown result report."
+    )
+
+    policy_audit_parser = subparsers.add_parser(
+        "policy-audit", help="Audit imported security policy for review findings."
+    )
+    policy_audit_parser.add_argument("source", type=Path)
+    policy_audit_parser.add_argument("--scope", help="Scope path, such as vsys/vsys1.")
+    policy_audit_parser.add_argument(
+        "--json", action="store_true", help="Print JSON policy audit result."
+    )
+    policy_audit_parser.add_argument(
+        "--report-md", type=Path, help="Write a Markdown audit report."
     )
 
     return parser
@@ -131,6 +145,23 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"Markdown report written to {args.report_md}")
         return 0
 
+    if args.command == "policy-audit":
+        try:
+            config = parse_source(args.source)
+        except SourceParseError as exc:
+            print(exc, file=sys.stderr)
+            return 1
+        result = PolicyAuditEngine().audit_config(config, args.scope)
+        if args.report_md:
+            export_policy_audit_markdown(result, args.report_md)
+        if args.json:
+            print(result.model_dump_json(indent=2))
+        else:
+            print(_format_policy_audit_result(result))
+            if args.report_md:
+                print(f"Markdown report written to {args.report_md}")
+        return 0
+
     parser.error("unknown command")
     return 2
 
@@ -161,6 +192,24 @@ def _format_policy_test_result(result) -> str:
         f"Later matching rules: {len(result.later_matching_rules)}",
         f"Warnings: {len(result.warnings)}",
     ]
+    return "\n".join(lines)
+
+
+def _format_policy_audit_result(result) -> str:
+    lines = [
+        "Frying-PAN Policy Audit Result",
+        f"Source type: {result.source_type or 'unknown'}",
+        f"Scope: {result.scope_path or 'all audited scopes'}",
+        f"Audited rules: {result.audited_rule_count}",
+        f"Findings: {result.finding_count}",
+        f"Warnings: {len(result.warnings)}",
+    ]
+    if result.finding_counts_by_severity:
+        counts = ", ".join(
+            f"{severity}={count}"
+            for severity, count in sorted(result.finding_counts_by_severity.items())
+        )
+        lines.append(f"Severity counts: {counts}")
     return "\n".join(lines)
 
 

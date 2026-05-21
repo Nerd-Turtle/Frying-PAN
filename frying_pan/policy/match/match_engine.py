@@ -47,6 +47,15 @@ class PolicyMatchEngine:
         result.warnings = [*warnings, *result.warnings]
         return result
 
+    def ordered_rules_for_scope(
+        self, config: NormalizedConfig, scope_path: str | None = None
+    ) -> tuple[list[SecurityRule], list[str], str | None]:
+        selected_scope = scope_path or self._default_scope_path(config)
+        if selected_scope is None:
+            return [], ["Imported configuration does not contain an auditable scope."], None
+        rules, warnings = self._rules_for_scope(config, selected_scope)
+        return rules, warnings, selected_scope
+
     def _evaluate_ordered_rules(
         self,
         ordered_rules: list[SecurityRule],

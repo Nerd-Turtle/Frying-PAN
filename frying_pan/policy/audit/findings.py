@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 
 class FindingType(StrEnum):
@@ -22,6 +23,11 @@ class FindingType(StrEnum):
     MISSING_OBJECT_REFERENCE = "MISSING_OBJECT_REFERENCE"
     UNRESOLVED_APPLICATION = "UNRESOLVED_APPLICATION"
     UNSUPPORTED_MATCH_CRITERIA = "UNSUPPORTED_MATCH_CRITERIA"
+    DISABLED_RULE = "DISABLED_RULE"
+    LOGGING_GAP = "LOGGING_GAP"
+    CLEANUP_RULE = "CLEANUP_RULE"
+    MISSING_CLEANUP = "MISSING_CLEANUP"
+    APPLICATION_DEFAULT_REVIEW = "APPLICATION_DEFAULT_REVIEW"
 
 
 class Severity(StrEnum):
@@ -33,6 +39,7 @@ class Severity(StrEnum):
 
 
 class AuditFinding(BaseModel):
+    finding_id: str | None = None
     finding_type: FindingType
     severity: Severity
     source_config: str
@@ -43,3 +50,40 @@ class AuditFinding(BaseModel):
     recommendation: str | None = None
     confidence: str = "medium"
     warnings: list[str] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class PolicyAuditResult(BaseModel):
+    source_id: str
+    source_type: str | None = None
+    scope_path: str | None = None
+    audited_rule_count: int = 0
+    findings: list[AuditFinding] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+    @computed_field
+    @property
+    def finding_count(self) -> int:
+        return len(self.findings)
+
+    @computed_field
+    @property
+    def finding_counts_by_type(self) -> dict[str, int]:
+        return self.counts_by_type()
+
+    @computed_field
+    @property
+    def finding_counts_by_severity(self) -> dict[str, int]:
+        return self.counts_by_severity()
+
+    def counts_by_type(self) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for finding in self.findings:
+            counts[finding.finding_type.value] = counts.get(finding.finding_type.value, 0) + 1
+        return counts
+
+    def counts_by_severity(self) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for finding in self.findings:
+            counts[finding.severity.value] = counts.get(finding.severity.value, 0) + 1
+        return counts

@@ -89,3 +89,25 @@ def test_cli_policy_test_json_and_markdown_report(tmp_path: Path, capsys) -> Non
     assert "Matched rule: `FP-REF-FW-ALLOW-USERS-TO-DMZ-WEB`" in report_path.read_text(
         encoding="utf-8"
     )
+
+
+def test_cli_policy_audit_json_and_markdown_report(tmp_path: Path, capsys) -> None:
+    report_path = tmp_path / "policy-audit.md"
+    result = main(
+        [
+            "policy-audit",
+            str(FIXTURES / "firewall" / "reference_config_items_virtual_router.xml"),
+            "--scope",
+            "vsys/vsys1",
+            "--json",
+            "--report-md",
+            str(report_path),
+        ]
+    )
+
+    captured = capsys.readouterr()
+
+    assert result == 0
+    assert '"finding_count"' in captured.out
+    assert "DISABLED_RULE" in captured.out
+    assert "Frying-PAN Policy Audit Report" in report_path.read_text(encoding="utf-8")

@@ -29,13 +29,15 @@ changes direction.
 Phase 0/Foundation is complete based on the validation performed during the
 foundation rebuild. Phase 1, PAN-OS Inventory Analyzer, is complete based on the
 validation recorded in the phase document. Phase 2, Policy Tester v1, is
-complete based on the validation recorded in the phase document.
+complete based on the validation recorded in the phase document. Phase 3,
+Policy Audit v1, is complete based on the validation recorded in the phase
+document.
 
 The project currently has a desktop shell, CLI inventory commands, local
 workspace model, source detection, Phase 1 PAN-OS inventory parsers, normalized
 models, reference/dependency foundations, report generation, conservative
-single-flow policy testing, plan model skeletons, and tests. XML mutation/export
-remains blocked.
+single-flow policy testing, structured policy audit findings, plan model
+skeletons, and tests. XML mutation/export remains blocked.
 
 ## Phase and Task Model
 
@@ -60,7 +62,7 @@ documentation updates are complete.
 | 0 | Foundation | Complete | [design.md](design.md) | Establish the offline desktop architecture, package skeleton, GUI shell, CLI skeleton, workspace model, and baseline checks. |
 | 1 | PAN-OS Inventory Analyzer | Complete | [phase-1.md](../phases/phase-1.md) | Parse Panorama and standalone firewall XML into normalized inventory, dependencies, CLI output, GUI visibility, and reports. |
 | 2 | Policy Tester v1 | Complete | [phase-2.md](../phases/phase-2.md) | Evaluate a single test flow with conservative first-match behavior, trace output, later matches, and warnings. |
-| 3 | Policy Audit v1 | Planned | [phase-3.md](../phases/phase-3.md) | Analyze full rulebases for obvious shadows, duplicate rules, broad allows, missing references, and App-ID/service uncertainty. |
+| 3 | Policy Audit v1 | Complete | [phase-3.md](../phases/phase-3.md) | Analyze full rulebases for obvious shadows, duplicate rules, broad allows, missing references, and App-ID/service uncertainty. |
 | 4 | Dedupe and Conflict Analysis | Planned | [phase-4.md](../phases/phase-4.md) | Detect duplicate objects/services, same-name conflicts, unused candidates, and object placement recommendations. |
 | 5 | Modify Plan | Planned | [phase-5.md](../phases/phase-5.md) | Stage object/rule modification decisions and generate modification reports without mutating XML. |
 | 6 | Migrate Plan | Planned | [phase-6.md](../phases/phase-6.md) | Stage source-to-target scope, object, zone, and rule mappings with dependency inclusion and policy assurance. |
@@ -160,7 +162,7 @@ Validation evidence is recorded in
 
 ## Phase 3: Policy Audit v1
 
-Status: Planned
+Status: Complete
 
 Detail:
 
@@ -171,6 +173,24 @@ Goal:
 Analyze a full rulebase for structured findings such as obvious full shadows,
 duplicate rules, broad allows, missing object references, App-ID gaps, and
 service/application uncertainty.
+
+Completed scope:
+
+- Structured `AuditFinding` and `PolicyAuditResult` models.
+- Scoped and whole-config policy audit entry points.
+- Missing/unresolved reference findings.
+- Duplicate rule and obvious full-shadow findings.
+- Broad allow, explicit cleanup, missing cleanup advisory, disabled rule, and
+  logging posture findings.
+- App-ID/service uncertainty findings for `application-default`, explicit App-ID
+  with service `any`, and port-based allows.
+- CLI `policy-audit` command with text, JSON, and Markdown report output.
+- Policy Audit GUI summary, findings table, and finding detail display backed
+  by core models.
+- Policy audit behavior notes with official Palo Alto Networks references.
+
+Validation evidence is recorded in
+[docs/phases/phase-3.md](../phases/phase-3.md).
 
 ## Phase 4: Dedupe and Conflict Analysis
 

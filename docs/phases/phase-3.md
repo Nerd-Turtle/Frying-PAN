@@ -1,6 +1,6 @@
 # Phase 3: Policy Audit v1
 
-Status: planned
+Status: complete
 
 ## Goal
 
@@ -61,11 +61,28 @@ Use these statuses consistently:
 
 A Task cannot be marked complete unless its validation criteria are satisfied.
 
+## Phase 3 Validation Evidence
+
+- `pytest -q` passed with 57 tests.
+- `ruff check .` passed.
+- CLI detect, inventory, policy-test, and policy-audit worked against reference fixtures.
+- Policy audit GUI/model tests passed offscreen.
+- Policy audit Markdown export tests passed.
+- `docs/policy-audit-notes.md` was created with official Palo Alto Networks references and current offline limitations.
+- XML mutation/export remains blocked.
+
 ## Tasks
 
 ### Task 3.1: Policy Audit Behavior Notes
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- `docs/policy-audit-notes.md` created and aligned to implemented audit
+  behavior.
+- `pytest -q` passed with 57 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -96,7 +113,15 @@ Completion Criteria:
 
 ### Task 3.2: Audit Finding Model
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- `AuditFinding` and `PolicyAuditResult` provide structured findings, computed
+  counts, warnings, and JSON serialization.
+- `tests/test_policy_audit_shadow.py` covers model serialization.
+- `pytest -q` passed with 57 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -123,7 +148,15 @@ Completion Criteria:
 
 ### Task 3.3: Rulebase Selection And Audit Context
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- `PolicyAuditEngine.audit_config()` supports scoped and whole-config audits.
+- Firewall and Panorama fixture tests cover context selection and
+  local-rule-gap warnings.
+- `pytest -q` passed with 57 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -150,7 +183,16 @@ Completion Criteria:
 
 ### Task 3.4: Missing And Unresolved Reference Findings
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Unresolved references are converted into structured audit findings with
+  selector type and target details.
+- Tests cover unresolved source address references and fixture-derived
+  unresolved references.
+- `pytest -q` passed with 57 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -176,7 +218,14 @@ Completion Criteria:
 
 ### Task 3.5: Duplicate Rule Findings
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Duplicate normalized criteria/action checks added.
+- Tests cover duplicate rule findings.
+- `pytest -q` passed with 57 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -205,7 +254,15 @@ Completion Criteria:
 
 ### Task 3.6: Obvious Full-Shadow Findings
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Obvious supported-selector full-shadow checks added with a first-match
+  documentation reference.
+- Tests cover obvious full shadow behavior.
+- `pytest -q` passed with 57 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -233,7 +290,14 @@ Completion Criteria:
 
 ### Task 3.7: Broad Allow And Cleanup Rule Findings
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Broad allow, explicit cleanup, and missing cleanup advisory checks added.
+- Tests and fixture CLI validation cover broad allow and cleanup findings.
+- `pytest -q` passed with 57 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -262,7 +326,14 @@ Completion Criteria:
 
 ### Task 3.8: Disabled Rule And Logging Findings
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Disabled rule and log-at-session-end review findings added.
+- Firewall fixture tests cover disabled rule findings.
+- `pytest -q` passed with 57 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -288,7 +359,15 @@ Completion Criteria:
 
 ### Task 3.9: App-ID And Service Uncertainty Findings
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- App-ID/service review checks added for `application-default`, service-any
+  with explicit applications, and port-based allows.
+- Fixture tests cover `application-default` review findings.
+- `pytest -q` passed with 57 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -316,7 +395,16 @@ Completion Criteria:
 
 ### Task 3.10: CLI Policy Audit Command
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- `frying-pan policy-audit` added with text, JSON, scope selection, and
+  Markdown report output.
+- CLI policy-audit worked against Panorama and firewall fixtures.
+- `tests/test_cli_inventory.py` covers JSON and Markdown output.
+- `pytest -q` passed with 57 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -343,7 +431,15 @@ Completion Criteria:
 
 ### Task 3.11: GUI Policy Audit Display
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Policy Audit GUI now displays summary, findings table, and finding detail
+  from core models.
+- `tests/test_gui_policy_audit.py` passed offscreen.
+- `pytest -q` passed with 57 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -370,7 +466,15 @@ Completion Criteria:
 
 ### Task 3.12: Policy Audit Report Export
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- Policy audit results serialize to JSON through Pydantic models.
+- Markdown export added in `frying_pan/export/policy_audit_exporter.py`.
+- `tests/test_policy_audit_exporter.py` passed.
+- `pytest -q` passed with 57 tests.
+- `ruff check .` passed.
 
 Goal:
 
@@ -398,7 +502,17 @@ Completion Criteria:
 
 ### Task 3.13: Final Phase 3 Validation
 
-Status: planned
+Status: complete
+
+Validation Evidence:
+
+- `pytest -q` passed with 57 tests.
+- `ruff check .` passed.
+- CLI detect, inventory, policy-test, and policy-audit worked against reference
+  fixtures.
+- Policy audit GUI/model and report export tests passed.
+- `docs/policy-audit-notes.md` and roadmap references were updated.
+- No XML mutation/export support was enabled.
 
 Goal:
 
