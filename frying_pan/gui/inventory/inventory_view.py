@@ -1,6 +1,17 @@
 from __future__ import annotations
 
-from PySide6.QtWidgets import QLabel, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QAbstractItemView,
+    QFrame,
+    QGridLayout,
+    QHeaderView,
+    QLabel,
+    QTableWidget,
+    QTableWidgetItem,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
 
 from frying_pan.analysis.inventory import summarize_inventory
 from frying_pan.normalized.config import NormalizedConfig
@@ -10,9 +21,39 @@ class InventoryView(QWidget):
     def __init__(self, config: NormalizedConfig | None = None) -> None:
         super().__init__()
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 20, 24, 20)
+        layout.setSpacing(12)
 
-        self.summary_label = QLabel("Inventory")
+        title = QLabel("Inventory")
+        title.setObjectName("PageTitle")
+        self.summary_label = QLabel("Load a supported configuration source to inspect inventory.")
         self.summary_label.setObjectName("InventorySummary")
+        self.summary_label.setProperty("muted", True)
+        layout.addWidget(title)
+        layout.addWidget(self.summary_label)
+
+        metrics_card = QFrame()
+        metrics_card.setObjectName("WorkbenchCard")
+        metrics_layout = QGridLayout(metrics_card)
+        metrics_layout.setContentsMargins(16, 12, 16, 12)
+        metrics_layout.setHorizontalSpacing(28)
+        self.metric_labels: dict[str, QLabel] = {}
+        for column, metric in enumerate(
+            ("Scopes", "Entities", "Security rules", "References", "Unresolved", "Warnings")
+        ):
+            metric_widget = QWidget()
+            metric_layout = QVBoxLayout(metric_widget)
+            metric_layout.setContentsMargins(0, 0, 0, 0)
+            value_label = QLabel("0")
+            value_label.setObjectName("MetricValue")
+            name_label = QLabel(metric)
+            name_label.setProperty("muted", True)
+            metric_layout.addWidget(value_label)
+            metric_layout.addWidget(name_label)
+            metrics_layout.addWidget(metric_widget, 0, column)
+            self.metric_labels[metric] = value_label
+        layout.addWidget(metrics_card)
+
         self.counts_table = QTableWidget(0, 2)
         self.counts_table.setHorizontalHeaderLabels(["Metric", "Count"])
         self.scopes_table = QTableWidget(0, 3)
@@ -22,11 +63,25 @@ class InventoryView(QWidget):
         self.rules_table = QTableWidget(0, 4)
         self.rules_table.setHorizontalHeaderLabels(["Name", "Rulebase", "Scope", "Action"])
 
-        layout.addWidget(self.summary_label)
-        layout.addWidget(self.counts_table)
-        layout.addWidget(self.scopes_table)
-        layout.addWidget(self.objects_table)
-        layout.addWidget(self.rules_table)
+        for table in (
+            self.counts_table,
+            self.scopes_table,
+            self.objects_table,
+            self.rules_table,
+        ):
+            table.setAlternatingRowColors(True)
+            table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+            table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+            table.verticalHeader().setVisible(False)
+            table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+
+        self.inventory_tabs = QTabWidget()
+        self.inventory_tabs.setDocumentMode(True)
+        self.inventory_tabs.addTab(self.objects_table, "Objects")
+        self.inventory_tabs.addTab(self.rules_table, "Security Rules")
+        self.inventory_tabs.addTab(self.scopes_table, "Scopes")
+        self.inventory_tabs.addTab(self.counts_table, "Summary")
+        layout.addWidget(self.inventory_tabs, 1)
 
         if config is not None:
             self.set_config(config)
@@ -47,6 +102,15 @@ class InventoryView(QWidget):
                 "Warnings": summary.warning_count,
             }
         )
+        for name, value in (
+            ("Scopes", summary.scope_count),
+            ("Entities", summary.entity_count),
+            ("Security rules", summary.security_rule_count),
+            ("References", summary.reference_count),
+            ("Unresolved", summary.unresolved_reference_count),
+            ("Warnings", summary.warning_count),
+        ):
+            self.metric_labels[name].setText(str(value))
         self._set_scopes(config)
         self._set_objects(config)
         self._set_rules(config)

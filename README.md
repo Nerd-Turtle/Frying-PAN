@@ -100,6 +100,22 @@ docs/devel/
 
 Use Python 3.12 or newer.
 
+### Windows (PowerShell)
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+.\.venv\Scripts\python.exe -m pytest
+.\.venv\Scripts\python.exe -m ruff check .
+.\.venv\Scripts\frying-pan-gui.exe
+```
+
+The GUI entry point is installed as a Windows GUI script, so packaged or
+installed launches do not require a console window. Projects and imported
+sources may live in paths containing spaces.
+
+### Linux / macOS
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate
@@ -114,6 +130,18 @@ Run the desktop shell:
 frying-pan-gui
 ```
 
+The desktop shell uses an IDE-style workbench: persistent workflow navigation
+on the left, a Project Explorer, one selected workspace in the main
+area, and a project-aware status bar. Use
+**File > New Project**, **File > Open Project**, and **File > Import XML** to
+drive the local workflow. New/Open always operate on portable projects;
+Import/Export always operate on XML configuration files. Importing supported XML immediately updates
+Inventory, Policy Audit, Dedupe / Conflicts, Modify, and Policy Tester context.
+New Project collects the project name and parent directory in one dialog and
+shows the final portable project-folder path before anything is written.
+Right-click a project in Project Explorer for the same project and XML actions.
+Export XML remains visible but blocked until serializer validation is complete.
+
 Run the CLI skeleton:
 
 ```bash
@@ -123,6 +151,8 @@ Run the CLI skeleton:
 .venv/bin/python -m frying_pan.cli.main inventory path/to/source.xml --report-md report.md
 .venv/bin/python -m frying_pan.cli.main workspace-create ./Frying-PAN-Project --name "Lab Migration"
 ```
+
+On Windows, replace `.venv/bin/python` with `.venv\Scripts\python.exe`.
 
 ## Design Principles
 

@@ -24,6 +24,8 @@ dev = [
 
 [project.scripts]
 frying-pan = "frying_pan.cli.main:main"
+
+[project.gui-scripts]
 frying-pan-gui = "frying_pan.app:main"
 
 [tool.setuptools.packages.find]
